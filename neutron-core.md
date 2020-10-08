@@ -92,7 +92,16 @@ Methods of ComStack: (note, due to hypervisor and language limitations etc, this
 * pop context() -> context -- this will destroy the current context and return it's content
 * context count () -> count -- this will return the total number of contexts currently held
 
-Limits
+Limit Constants
+
+* COMSTACK_MAX_ELEMENT_SIZE -- proposed, 64Kb. This is the maximum size of a single stack item on the comstack. This limit has broad effects on ABI design, hypervisor implementation, and internal communications. Thus it would be extremely difficult to change after the fact.
+* COMSTACK_MAX_TOTAL_MEMORY -- proposed, 2Mb. This is the maximum size of all elements on the stack put together, excluding context stack info. This determines the overall maximum amount of memory that can be consumed by the ComStack. This would be hard coded into various pieces of infrastructure, and so reducing it after the fact will be extremely difficult. However, it can easily be made larger with minimal code changes.
+* COMSTACK_MAX_ELEMENT_COUNT -- proposed, 256. This is the maximum number of elements that can be held on the stack. As with total memory, this is hard to make smaller after being set, but easy to make larger
+* CONTEXT_STACK_MAX_COUNT -- proposed, 128. This is the total number of different contexts which can be held within the comstack. It is expected that gas costs will prevent exceeding the actual count here, as each context added equates to a new VM instance and new call operation.
+
+## Neutron Call System
+
+This is more informally called the "Neutron Core". It is what works together with ComStack to facilitate all intercommunication between smart contracts and different ElementAPIs and thus the final underlying blockchain. 
 
 
 
