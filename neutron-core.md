@@ -50,7 +50,7 @@ These are features or goals that will not be the target of the current specifica
 The following components will be included within this spec:
 
 * ComStack -- a communication stack for smart contracts talking to Neutron and vice versa, an integral piece of all ABI specifications
-Neutron Hypervisor -- a hypervisor is what mediates between the smart contract executing within a VM and the Neutron Call System and ComStack.
+* Neutron Hypervisor -- a hypervisor is what mediates between the smart contract executing within a VM and the Neutron Call System and ComStack.
 * Neutron x86 Hypervisor -- The specific working mechanisms of the x86 VM hypervisor will be included
 * x86 VM -- The specifications for the x86 VM itself will be included here for posterity, even though it may not exactly belong here. 
 * Neutron Call System -- The core interface by which all other pieces of Neutron can communicate with each other
@@ -103,7 +103,51 @@ Limit Constants
 
 This is more informally called the "Neutron Core". It is what works together with ComStack to facilitate all intercommunication between smart contracts and different ElementAPIs and thus the final underlying blockchain. 
 
+The Call System can be called from other Elements or from smart contract code. Calling it from an external interface uses a simple interface consisting of 2 inputs (arguments) and 2 outputs (results).
 
+Inputs:
+* ElementID, u32 -- The Element to contact regarding this call
+* FunctionID, u32 -- The actual function to utilize within the Element
 
+Outputs:
+* Result, u32 -- The result code. In Rust implementations, errors are handled so that it appears to give 2 outputs, one with a non-error result and one with an error result
+* Non-recoverable, bool -- If this is set, then an error has occurred which means that the entire smart contract execution (including any further up contexts) must immediately terminate, reverting all state. This can happen as a result of reading out of state rent, or encountering an "impossible" error within some Neutron Infrastructure.
 
+From this, the interface would appear quite limited, however, additional arguments, results, and data can be passed using the ComStack, which are shared between both the caller and callee. 
+
+There is a standard for ElementIDs and FunctionIDs. Specifically, if the top bit is set on either an ElementID or FunctionID (ie, greater than 0x8000_0000) then the Element or Function is considered to be a non-standard one. This would mean that these elements/functions are not expected to be shared or implemented in any other blockchain. 
+
+There is no standard for result codes, but anything greater than 0x8000_0000 is regarded as an error. This could include errors such as reading a stack item that doesn't exist, running out of gas, etc. In some cases this may cause the current smart contract execution to terminate, but will not cause a chain of terminations up the context stack like a Non-recoverable error would. 
+
+The other interfaces beyond actual Element calls include:
+
+* Logging interface, for logging errors, info, debug messages, etc.
+* Tracking of block height or another mechanism which is used to determine what Elements and features are currently available to smart contracts (ie, to handle forks)
+* Initial loading of state data for smart contract bytecode
+* Blockchain-specific methods of beginning the execution of a smart contract VM
+
+The Call System is regarded as a "blockchain provided component". This means that each blockchain implementation will provide it's own version of the Call System. In actual implementation terms, there may be a lot of borrowed code through interfaces, traits, classes, etc. However, the Call System needs to be aware of several pieces of blockchain specific information.
+
+The specific responsibilities of the Call System includes:
+
+* Holding a list of ElementIDs and their mapping to Element components when called upon
+* Tracking the block height and which Elements are enabled at any one time within the blockchain
+* How to load smart contract bytecode from the consensus database
+* How to write smart contract bytecode into the consensus database, optionally (ie, if the blockchain provides a proper writeable database)
+* Initiates the top level execution into a smart contract (ie, to translate from a received transaction on the blockchain into a smart contract execution)
+* Tracks the different VM hypervisors and interprets smart contract external calls to call the appropriate VM
+* Implements the logging system used by other Element components for informative messages which are not tracked for consensus purposes
+* Handles checkpoints (if implementing a database) within the state database to properly allow for reverting state in the case of errors
+
+## Neutron Hypervisor
+
+A Neutron Hypervisor is a component which exposes an interface for Neutron to a VM. Because each VM could be radically different, there is no one size fits all approach that is appropriate. However, the specific key pieces that should be exposed in a hypervisor includes:
+
+* ComStack operations, including placing data on the stack and getting data off of the stack
+* Current context information, including gas used, gas limits, self-address information, etc
+* An interface to call Neutron Element APIs
+
+There is additional "typical" responsibilities such as entry point handling, memory allocation, etc. However, these are highly variable between the different types of potential smart contract VMs. Neutron is built to allow for many different types of VMs and so there are minimal demands on this specific component to accomodate this goal. 
+
+## 
 
