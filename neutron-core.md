@@ -115,9 +115,9 @@ Outputs:
 
 From this, the interface would appear quite limited, however, additional arguments, results, and data can be passed using the ComStack, which are shared between both the caller and callee. 
 
-There is a standard for ElementIDs and FunctionIDs. Specifically, if the top bit is set on either an ElementID or FunctionID (ie, greater than 0x8000_0000) then the Element or Function is considered to be a non-standard one. This would mean that these elements/functions are not expected to be shared or implemented in any other blockchain. 
+There is a standard for ElementIDs and FunctionIDs. Specifically, if the top bit is set on either an ElementID or FunctionID (ie, greater than 0x8000_0000) then the Element or Function is considered to be a non-standard one. This would mean that these elements/functions are not expected to be shared or implemented in any other blockchain. In addition the FunctionID of 0 is reserved. This is used to test if a particular ElementID is available. The element should return a result of 0 or greater if it exists. It should otherwise return an element does not exist error code. 
 
-There is no standard for result codes, but anything greater than 0x8000_0000 is regarded as an error. This could include errors such as reading a stack item that doesn't exist, running out of gas, etc. In some cases this may cause the current smart contract execution to terminate, but will not cause a chain of terminations up the context stack like a Non-recoverable error would. 
+There is no standard for result codes, but anything greater than or equal to 0x8000_0000 is regarded as an error. This could include errors such as reading a stack item that doesn't exist, running out of gas, etc. In some cases this may cause the current smart contract execution to terminate, but will not cause a chain of terminations up the context stack like a non-recoverable error would. 
 
 The other interfaces beyond actual Element calls include:
 
