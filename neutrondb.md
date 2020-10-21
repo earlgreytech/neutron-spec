@@ -34,7 +34,17 @@ A Delta can encompass a number of different types of information. This includes:
 
 Note that smart contracts normally can get no real insight into the current status of the Delta tree system, however, allowances are made for reading execution receipts and log data from smart contracts. Note that the ability to read such info is limited to only be within the rent period. Unlike normal state, these special pieces of state can not be restored once they fall out of rent, and furthermore will not be propagated by being read. The only insight that might be given to smart contracts is the ability to get previous block header information, which would include the DeltaRoot hash which can be used for verifying proofs. 
 
+## Restrictions For Smart Contracts
 
+* It will not be possible from within a contract execution to determine if a piece of state is in the rent period
+* It is not possible to determine how much rent a piece of state has remaining
+* (if using reject set) it will be required to restore a state partially before modifying it
+* There will be no refund for removing or reducing the size of a state other than lower rent costs
+* It is not possible to determine if a state exists or not. Accessing any state which doesn't exist will have the same behavior as an out-of-rent access. Internally there is no method for a non-archival node to determine the difference between a state that is out of rent and a state that doesn't exist.
+
+# Protected vs Unprotected State
+
+All state in NeutronDB is internally treated the same, however, for smart contracts there will be the concept of protected and unprotected state. Unprotected state is the typical user accessible data keys reflecting various smart contract states for things like ERC20 balances, owners, etc. Protected state however is not generally capable of being directly accessed by smart contracts and is used for internal state needed for things like metadata, contract bytecode, etc. This is managed by key "prefixes". Specifically, a key with a prefix of "_" is unprotected state and any other prefix is considered protected. 
 
 # The old state restore problem
 
@@ -48,7 +58,7 @@ Specifically, the issue is that there must be a mechanism to detect if an old st
 * Restoration is attempted using proofs from block 100, to restore A to 10
 * Because nodes lack information about block 200's trees after rent has passed, how can this restoration be stopped?
 
-## The naive solution
+## The Naive Solution
 
 The simplest solution to this issue is to track the block number last set for each state key:
 
@@ -89,6 +99,12 @@ Thus, in this method there is no need for tracking every key indefinitely like i
 There may be additional security for SPV and light wallets as well by somehow putting a hash proof of the reject set into the block header. Using a list of block headers, it would then be trivial to detect stale and false state proofs without needing to fully verify the blockchain.
 
 This approach does come with one downside however. In the case of state modification, the tracking ID of the old state must be known. This means that it is not possible to simply replace out of rent state and instead that state must be restored prior to replacement. There could potentially be a short cut to this, such as submitting a proof for the tracking ID without needing anything more than a hash of the actual state, however, it is still a slight inefficiency. 
+
+Proposed State Modification Delta Structure:
+
+* key hash
+* data hash
+* tracking ID
 
 
 
