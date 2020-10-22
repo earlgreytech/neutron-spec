@@ -104,5 +104,5 @@ A Neutron Hypervisor is a component which exposes an interface for Neutron to a 
 
 There is additional "typical" responsibilities such as entry point handling, memory allocation, etc. However, these are highly variable between the different types of potential smart contract VMs. Neutron is built to allow for many different types of VMs and so there are minimal demands on this specific component to accomodate this goal. 
 
-## 
+
 

@@ -50,7 +50,19 @@ The registers which can be used for returning data from a system call are:
 
 If more data is needed, or if dynamic length data is used, then the ComStack should be used. 
 
-The list of operations supported by interrupts are:
+For reference, given an interrupt of the format `do_stuff(foo, bar, baz, fam) -> zam:u64` the register usage would be as so for input:
+
+* EAX = foo
+* ECX = bar
+* EDX = baz
+* first item popped from comstack = fam
+
+And as so for output:
+
+* EAX = lower 32 bits of zam
+* EDX = upper 32 bits of zam
+
+The list of operations supported by x86 interrupts are:
 
 ComStack operations:
 
@@ -126,6 +138,21 @@ Contract creation is done using a specialized ABI and the ComStack. The order of
 * Data section 2
 * ...
 * Contract accessible data etc follows (not used by hypervisor)
+
+## Initial CPU State
+
+The expected initial state when VM execution begins is all registers and flag values set to 0, excluding EIP being set to 0x10000, and the following memory areas being loaded:
+
+* 1st code section
+* stack memory accessible
+* aux memory accessible
+
+## Loading Memory Areas
+
+Each code section and data section which is attempted to be accessed by the VM will result in loading that section from NeutronDB. This will incur a memory size cost as well as the cost from loading the state from NeutronDB. There is no explicit operation to load or unload memory and it is instead done implicitly by trying to access that memory
+
+
+
 
 
 
