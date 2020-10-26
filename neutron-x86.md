@@ -171,6 +171,15 @@ The following definitions (in Rust) are used for NeutronShortAddress and Neutron
 
 NeutronShortaddress is a fixed size, 24 byte structure which can be used for all address uniqueness and identification purposes, however, it can not be used for sending Qtum to an address EXCLUDING perfect-conversion addresses. Perfect-conversion addresses are address types which can be converted perfectly from a short address to a full address. In otherwords, the entire address can be contained within 24 bytes. NeutronFullAddress is a dynamic length structure which contain an address of any size and can be used for sending Qtum. For simplicity and lower resource usage, the short form of an address should be used in all places where possible. It is possible to convert a full address to a short address, but not always the other way around. 
 
+The following constants are also defined:
+
+    EXECUTION_TYPE_CALL     = 0
+    EXECUTION_TYPE_DEPLOY   = 1
+    EXECUTION_TYPE_ONE_TIME = 2
+
+* CALL -- A call from a transaction or from an external contract into an existing smart contract
+* DEPLOY -- A new smart contract is being deployed
+* ONE_TIME -- A piece of smart contract code is being executed which has not and will not be saved to the blockchain permanently and will not be assigned an account/address 
 
 
 
