@@ -8,7 +8,7 @@ The specific subset is defined as so:
 
 * The i686 instruction set, excluding FPU, MMX, and SSE instructions
 * The top bit of an address is set if accessing mutable memory (anything >2Gb)
-* Segment registers are never used. Segment register override prefixes are ignored (though not invalid) and opcodes which explictly operate on segment registers including far jmps and far calls will throw an invalid opcode exception
+* Segment registers are never used. Segment register override prefixes are ignored (though not invalid) and opcodes which explictly operate on segment registers including far jmps and far calls will throw an invalid opcode exception, excluding push and pop operations for segments
 * Exceptions are not capable of being handled within the VM as user serviceable interrupts. For instance, if divide by zero happens, it does not trigger interrupt 0. Further more, there is no ability to register user code interrupts. Interrupts are always a system call which will exit the VM
 * Each opcode can be no larger than 16 bytes (i686 specification limit)
 * From the beginning of each opcode's location in memory, at least 16 bytes must be readable afterwards. This means that in a memory the size of 100 bytes, no reachable opcode can be placed after the 84th byte
@@ -23,14 +23,14 @@ The instruction set supported is a subset of i686. All common opcodes generated 
 
 * Instructions which require priviledge (ie, ring 0 - ring 2) or are designed for the implementation of operating system features are disallowed
 * Instructions which test if memory using a segment register is readable is invalid
-* The BOUND instruction is invalid (never used by compilers due to unpredictable interrupt behavior)
-* IN and OUT instructions (and variants) are not implemented
+* The BOUND instruction is invalid (never used by compilers due to unpredictable interrupt behavior) and will result in an opcode error
+* IN and OUT instructions (and variants) are not implemented and will result in an opcode error
 * It is effectively impossible to use 16 bit addressing mode opcodes and so this functionality will immediately trigger an error, excluding the 16 bit LEA opcode which is valid and will function properly
 * The LOCK prefix is valid on all opcodes and will never trigger an error. It is treated as a NOP
-* The CPUID opcode is not implemented and will trigger an error
-* The HLT opcode will never resume execution, it will explicitly terminate the program
-* Loading segment registers (using MOV etc) will always trigger an error
-* PUSH and POP operations for segment registers will function as a no-op, but will modify the stack
+* The CPUID opcode is not implemented and will trigger an opcode error
+* The HLT opcode will never resume execution, it will explicitly terminate the program, as if using the interrupt `exit_execution(EAX)`
+* Loading segment registers (using MOV etc) will always trigger an opcode error
+* PUSH and POP operations for segment registers will function as a no-op, but will modify the stack. Specifically, pushing a segment will always result on a 0:u16 being pushed to the stack, while popping a segment will always result in the ESP register being moved appropriately, but nothing being done with the data that is on the stack
 
 # The x86 Hypervisor
 
@@ -68,19 +68,18 @@ The list of operations supported by x86 interrupts are:
 ComStack operations:
 
 * Interrupt 0x10: push_comstack (buffer, size)
-* Interrupt 0x11: pop_comstack (buffer, max_size) -> actual_size: u32
-* Interrupt 0x12: peek_comstack (buffer, max_size, index) -> actual_size: u32
-* Interrupt 0x13: swap_comstack (index)
-* Interrupt 0x14: dup_comstack()
-* Interrupt 0x15: comstack_item_count() -> size:u32
-* Interrupt 0x16: comstack_memory_size() -> size:u32
-* Interrupt 0x17: comstack_memory_remaining() -> size:u32
-* Interrupt 0x18: comstack_item_limit_remaining() -> size:u32
-* Interrupt 0x19: comstack_clear()
+* Interrupt 0x11: pop_comstack (buffer, max_size) -> actual_size: u32 -- note: if buffer and max_size is 0, then the item will be popped without copying the item to memory and only the actual_size will be returned
+* Interrupt 0x12: peek_comstack (buffer, max_size, index) -> actual_size: u32 -- note: if buffer and max_size is 0, then this function can be used solely to read the length of the item. 
+* Interrupt 0x14: dup_comstack() -- will duplicate the top item on the stack
+* Interrupt 0x15: comstack_item_count() -> size:u32 -- will get the number of items on the stack
+* Interrupt 0x16: comstack_memory_size() -> size:u32 -- will get the total size of all items on the stack
+* Interrupt 0x17: comstack_memory_remaining() -> size:u32 -- will get the remaining total size that is allowed to be used within this execution
+* Interrupt 0x18: comstack_item_limit_remaining() -> size:u32 -- will get the total remaining number of items that can be pushed onto the stack
+* Interrupt 0x19: comstack_clear() -- Will clear the stack completely, without giving any information about what was held on the stack
 
 Call System Functions:
 
-* Interrupt 0x20: system_call(feature, function) -> error:u32
+* Interrupt 0x20: system_call(feature, function) -> error:u32 -- will call into the NeutronCallSystem
 
 Hypervisor Functions:
 
@@ -88,23 +87,25 @@ Hypervisor Functions:
 
 Context Functions:
 
-* Interrupt 0x90: gas_limit() -> limit:u64
-* Interrupt 0x91: self_address() -- result on stack as NeutronShortAddress
-* Interrupt 0x92: origin() -- result on stack as NeutronShortAddress
+* Interrupt 0x90: gas_limit() -> limit:u64 -- Will get the total amount of gas available for the current execution
+* Interrupt 0x91: self_address() -- result on stack as NeutronShortAddress -- Will return the current address for the execution. For a "one-time" execution, this will return a null address
+* Interrupt 0x92: origin() -- result on stack as NeutronShortAddress -- Will return the original address which caused the current chain of executions
 * Interrupt 0x93: origin_long() -- result on stack as NeutronLongAddress
-* Interrupt 0x94: sender() -- result on stack as NeutronShortAddress
+* Interrupt 0x94: sender() -- result on stack as NeutronShortAddress -- Will return the address which caused the current execution (and not the entire chain)
 * Interrupt 0x95: sender_long() -- result on stack as NeutronLongAddress
-* Interrupt 0x96: value_sent() -> value:u64
-* Interrupt 0x97: nest_level() -> level:u32
-* Interrupt 0x98: gas_remaining() -> gas:u64
-* Interrupt 0x99: execution_type() -> type:u32
+* Interrupt 0x96: value_sent() -> value:u64 -- The total amount of Qtum sent with the execution
+* Interrupt 0x97: nest_level() -> level:u32 -- The number of times the current contract address is on the ContextStack. For example, the nest_level of A in the case of `A -> B -> C -> A -> D -> A` will be 3.
+* Interrupt 0x98: gas_remaining() -> gas:u64 -- The total amount of gas remaining for the current execution
+* Interrupt 0x99: execution_type() -> type:u32 -- The type of the current execution (see built-in types)
 
 System Functions:
 
-* Interrupt 0xFE: revert_execution(status) -> noreturn
-* Interrupt 0xFF: exit_execution(status) -> noreturn
+* Interrupt 0xFE: revert_execution(status) -> noreturn -- Will revert the current execution, moving up the chain of execution to return to the previous contract, and reverting all state changes which occured within the current execution
+* Interrupt 0xFF: exit_execution(status) -> noreturn -- Will exit the current execution, moving up the chain of execution to return to the previous contract. State changes will only be committed if the entire above chain of execution also exits without any reverting operations. 
 
 ## x86 Memory Map
+
+The x86 memory map is as follows:
 
 * 0x10000, immutable, first code memory
 * 0x20000, immutable, second code memory
@@ -126,9 +127,11 @@ The data and code of a smart contract are stored separately within NeutronDB. Th
 * 0x02 01 -- second data section
 * ... up to 16 data sections
 
+These memory sections can be conveniently be split up and used by ELF sections in smart contract compilation which can then be parsed by a Neutron tool to remove the complexities of the ELF format, leaving only a list of memory sections with corresponding target addresses.
+
 ## Contract Creation
 
-Contract creation is done using a specialized ABI and the ComStack. The order of elements on the comstack (in pop order) include:
+Contract creation is done using a specialized ABI and the ComStack. The order of elements on the comstack (in pop order) are as follows:
 
 * VM Version info (currently unspecified)
 * Section Info (specifies number of code and data sections follow)
@@ -142,16 +145,47 @@ Contract creation is done using a specialized ABI and the ComStack. The order of
 
 ## Initial CPU State
 
-The expected initial state when VM execution begins is all registers and flag values set to 0, excluding EIP being set to 0x10000, and the following memory areas being loaded:
+The expected initial state when VM execution begins is all registers and flag values set to 0, excluding EIP being set to 0x10000, where execution will begin, and the following memory areas will be loaded:
 
 * 1st code section
 * stack memory accessible
 * aux memory accessible
 
+The following behavior will describe the code segment:
+
+* Base Address = 0
+* Segment Limit = 0xFFFFF
+* Granularity = true (Segment Limit is express in 4096 byte pages)
+* Default operand size = true (32 bit operations by default)
+* Long = false (not 64-bit mode)
+* Present = true (using this segment will not cause an error)
+* Descriptor privilege level = 3 (ring 3 access to this descriptor)
+* Type = true (segment is a code segment descriptor)
+* Conforming = true (code may be accessed from less privileged levels, no-op)
+* Readable = true (code segment is readable)
+* Accessed = N/A no-op
+
+The following behavior will describe the data and stack segment:
+
+* Base Address = 0
+* Segment Limit = 0xFFFFF
+* Granularity = true (Segment Limit is express in 4096 byte pages)
+* Big = true
+* Long = false (not 64-bit mode)
+* Present = true (using this segment will not cause an error)
+* Descriptor privilege level = 3 (ring 3 access to this descriptor)
+* Type = true (segment is a code segment descriptor)
+* Expand-Down = true on stacks (stacks grow down; this is a standard behavior in almost all x86 operating systems), false on data
+* Writable = true (data/stack segment is writeable)
+* Accessed = N/A no-op
+
+Note that segment behavior is not enforced, for instance, writing data using a CS segment override will not result in an error.
+
 ## Loading Memory Areas
 
-Each code section and data section which is attempted to be accessed by the VM will result in loading that section from NeutronDB. This will incur a memory size cost as well as the cost from loading the state from NeutronDB. There is no explicit operation to load or unload memory and it is instead done implicitly by trying to access that memory
+Each code section and data section which is attempted to be accessed by the VM will result in loading that section from NeutronDB without any smart contract visible error (unless the section does not exist). This will incur a memory size gas cost as well as the gas cost for loading the state from NeutronDB. There is no explicit operation to load or unload memory and it is instead done implicitly by trying to access that memory
 
+Note that in the case of one-time executions, no state will be stored in NeutronDB for the contract, nor will any state be loaded (except by external contract calls and external state loads) from NeutronDB. Instead, the entire set of code and data memory data will be stored within the transaction data and loaded into the Hypervisor via the ComStack. 
 
 ## Built-in Types
 
