@@ -6,12 +6,13 @@ The qx86 VM is designed specifically to remove unneeded functionality and to red
 
 The specific subset is defined as so:
 
+* The i686 instruction set, excluding FPU, MMX, and SSE instructions
 * The top bit of an address is set if accessing mutable memory (anything >2Gb)
 * Segment registers are never used. Segment register override prefixes are ignored (though not invalid) and opcodes which explictly operate on segment registers including far jmps and far calls will throw an invalid opcode exception
 * Exceptions are not capable of being handled within the VM as user serviceable interrupts. For instance, if divide by zero happens, it does not trigger interrupt 0. Further more, there is no ability to register user code interrupts. Interrupts are always a system call which will exit the VM
-* Each opcode can be no larger than 16 bytes (x86 specification limit)
+* Each opcode can be no larger than 16 bytes (i686 specification limit)
 * From the beginning of each opcode's location in memory, at least 16 bytes must be readable afterwards. This means that in a memory the size of 100 bytes, no reachable opcode can be placed after the 84th byte
-* There is no allowances for paging-like setups or memory mapped devices
+* There is no allowances for paging-like setups or memory mapped devices, including memory mapped hypervisor system calls
 * All values in EFLAGS are ignored and treated as 0 except for AF, CF, ZF, PF, and SF
 * External interrupt behavior is completely ignored, there is no external interrupt support
 * All memory below 0x10000 is inaccessible. This makes 16-bit addressing useless aside from with LEA. Aside from LEA, any other opcode with an address override prefix will be treated as an invalid opcode.
@@ -152,9 +153,23 @@ The expected initial state when VM execution begins is all registers and flag va
 Each code section and data section which is attempted to be accessed by the VM will result in loading that section from NeutronDB. This will incur a memory size cost as well as the cost from loading the state from NeutronDB. There is no explicit operation to load or unload memory and it is instead done implicitly by trying to access that memory
 
 
+## Built-in Types
 
+The following definitions (in Rust) are used for NeutronShortAddress and NeutronFullAddress
 
+    #[repr(C)]
+    pub struct NeutronShortAddress{
+        pub version: u32,
+        pub data: [u8; 20]
+    }
 
+    #[repr(C)]
+    pub struct NeutronFullAddress<'a>{
+        pub version: u32,
+        pub data: &'a [u8]
+    }
+
+NeutronShortaddress is a fixed size, 24 byte structure which can be used for all address uniqueness and identification purposes, however, it can not be used for sending Qtum to an address EXCLUDING perfect-conversion addresses. Perfect-conversion addresses are address types which can be converted perfectly from a short address to a full address. In otherwords, the entire address can be contained within 24 bytes. NeutronFullAddress is a dynamic length structure which contain an address of any size and can be used for sending Qtum. For simplicity and lower resource usage, the short form of an address should be used in all places where possible. It is possible to convert a full address to a short address, but not always the other way around. 
 
 
 
