@@ -28,6 +28,8 @@ unsized[u8] is treated as a single item on the stack of variable size. Thus, thi
 
 unsized[u[n]] is more complicated as it involves multiple stack items. It begins with a simple u16 stack item indicating the size. If the size is 0, then there are no further relevant stack items. Otherwise the size is the number of items following that need to be popped from the stack. Using this mechanism within the ABI, each element within the array must be an exact size, though with the same zero extension properties of primitive integers in the case of a smaller size. The sized[u[n]][m] implementation is treated the same as the unsized variant, but does not include a u16 stack item indicating the total length, as the length is explicitly specified within the ABI. Each element given as an empty stack item is treated as an array of 0 of the appropriate "n" size.
 
+Strings are "flat" arrays of UTF-8 character data with no preceding count of characters nor null termination. This means they are neither pascal style strings nor C style strings. Their length is known by the ComStack as the size of an item is encoded within the stack. All UTF-8 parsing of strings for display in Element APIs they should be considered lossy and best-effort. Invalid UTF-8 strings will be best-effort parsed and should not result in any smart contract visible error. Note that any consensus-visible parsing of these strings must remain consistent however to always give the same style of error handling in the case of an invalid UTF-8 string. 
+
 This ABI can be textually represented using Rust-like function signatures. Some examples:
 
 * `check_balance(check_address: address, tokenid: u8) -> balance: u64`
