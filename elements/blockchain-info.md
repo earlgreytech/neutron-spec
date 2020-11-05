@@ -43,8 +43,8 @@ The blockchain info returned is a structure which conveys the following informat
 
 * Consensus mechanism -- PoW, PoS, DPoS, PoA, other
 * Expected block time, in seconds (0 for sub-second or irregular blocks)
-* UTXO or Accounting
-
+* UTXO or Accounting based
+* Uses rent based state
 
 
 ### Blockchain Vendor and ID

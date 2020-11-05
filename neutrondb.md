@@ -46,6 +46,12 @@ Note that smart contracts normally can get no real insight into the current stat
 
 All state in NeutronDB is internally treated the same, however, for smart contracts there will be the concept of protected and unprotected state. Unprotected state is the typical user accessible data keys reflecting various smart contract states for things like ERC20 balances, owners, etc. Protected state however is not generally capable of being directly accessed by smart contracts and is used for internal state needed for things like metadata, contract bytecode, etc. This is managed by key "prefixes". Specifically, a key with a prefix of "_" is unprotected state and any other prefix is considered protected. 
 
+# Handling Blockchain Rollbacks and Orphans
+
+Certain historical state data must be kept for a set amount of time. This exact time is proposed to be 1/10th of the Rent Period. For instance, if the rent period is 5000 blocks, then this historical data must be kept for 500 blocks. This is to allow for rollbacks of orphaned blocks without needing to do a resync. If an exceptional case occurs where a rollback must occur beyond this historical data period, then a full resync/reindex of the node would be required. This is likely the case either way due to other consensus constraints around historical data and rolling back of such a deep fork. Specifically in Qtum, this is considered to be 500 blocks (with current 2 minute blocks) as beyond this will run into PoS sync problems. 
+
+This historical data is held in such a way that it can automatically be removed in the same way as out of rent data would be dropped from the database. 
+
 # The old state restore problem
 
 One issue exists with the state database currently, one that is an implementation detail and not necessarily a blocker for the consensus proofs. 

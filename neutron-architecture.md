@@ -105,4 +105,85 @@ A Neutron Hypervisor is a component which exposes an interface for Neutron to a 
 There is additional "typical" responsibilities such as entry point handling, memory allocation, etc. However, these are highly variable between the different types of potential smart contract VMs. Neutron is built to allow for many different types of VMs and so there are minimal demands on this specific component to accomodate this goal. 
 
 
+## Built-in State
+
+Whatever method by which Global Storage is implemented, there is a requirement for permanent (ie, not affected by rent) fields which indicate the overall characteristics and status of each smart contract deployed to the blockchain. This is standardized for the entire NeutronSystem and each hypervisor/VM must follow this standard. Specifically, any state with the prefix of `00` must be Neutron standardized data. Hypervisors should use a different prefix for internal data, bytecode, etc. 
+
+The ContractType field will contain the following information:
+
+* NeutronVersion: implied -- Included in the smart contract UniversalAddress; Indicates which VM etc to execute and any VM specific version info
+* VMExtra: u16 -- Extra flags etc data which may be used by specific VMs/hypervisors
+* Flags: u8 -- Various flags for it's execution which do not rely on the hypervisor/VM type.
+
+The ContractType field will be held in the state key: `00 01`
+
+The VMVersion field is defined as so, in Rust:
+
+    pub struct NeutronVersion{
+        pub format: u8,
+        pub root_vm: u8,
+        pub vm_version: u8,
+        pub blockchain_version: u8
+    }
+
+Format shall always be 0 but may be given additional meaning in future versions.
+
+root_vm shall be one of these values:
+
+* 0 -- Unused/reserved for AAL purposes
+* 1 -- Legacy EVM (TBD)
+* 2 -- qx86
+* 3 -- Neutron EVM (TBD)
+* 4 -- WASM (TBD)
+
+vm_version shall currently be 0, indicating "latest VM", but may be used in the future for additional features
+
+blockchain_version shall be one of the following:
+
+* 0 -- Unused/Reserved
+* 1 -- Qtum Mainnet
+* 2 -- Qtum Testnet
+
+Note: blockchain version must match the blockchain being used as a consensus rule. ie, it is not possible to use Qtum Testnet formed addresses on Qtum Mainnet. 
+
+Proposed flags:
+
+* Upgradeable -- Can update it's own deployed bytecode
+* Stateless -- The contract can store no global storage state, aside from it's own bytecode. Noteably it can read external smart contract state.
+* PureContract -- Every execution of this smart contract should be assumed to be pure, with no side effects. (requires Upgradeable, Stateless, and NonPayable flag)
+* NonPayable -- This smart contract should never be capable of holding coins
+
+Note it is not possible to modify ContractType after a smart contract has been deployed.
+
+
+The ContractStatus field will be stored separately from ContractType and will contain the following information:
+
+* Balance: u64 -- Balance in coins
+* AccountingID: [u8:40] -- UTXO ID (within Qtum, may vary in other blockchains) which holds the contract's balance
+* UpgradeCount: u32 -- Number of bytecode upgrades which the contract has undergone. Note this counts the number of executions which incurred one or more bytecode modifications. It does not count individual bytecode upgrades, for instance if a single execution led to 2 sections of bytecode being upgraded. Note this is Hypervisor controlled
+* ABIFormat: u8 -- The specific ABI which should be used for communication with this smart contract
+* ABIType: u64 -- An unverified declaration of the type of ABI this smart contract supports
+
+The ContractStatus state will be held in the key: `00 02`
+
+AccountingID in Qtum is composed of the following:
+
+* TransactionIDHash: u256 -- the txid
+* OutputNumber: u32 -- the output number
+* ExtraInfo: u32 -- May be used in legacy EVM to indicate an AALv1 controlled transaction??
+
+
+Proposed ABIFormats:
+
+* 0 -- NeutronABI
+* 1 -- Flat Ethereum ABI
+
+
+Proposed ABITypes:
+
+None yet, this will require thoughts about identifier standards.
+
+ContractStatus can be modified, but not without restrictions. Specifically, only ABIFormat and ABIType fields may be updated and requires a hypervisor specific upgrade method. This can not be modified in stateless, pure, or non-upgradeable smart contracts
+
+Note: In stateless blockchain models which do not incorporate a state database, all of these may be left at default values. 
 
