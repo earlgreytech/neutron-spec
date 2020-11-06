@@ -65,6 +65,8 @@ And as so for output:
 
 The list of operations supported by x86 interrupts are:
 
+Note all operations here unless specified are classified as "pure". "variable" means that the type of operation may be pure or another type depending on exact arguments etc. 
+
 ComStack operations:
 
 * Interrupt 0x10: push_comstack (buffer, size)
@@ -79,7 +81,7 @@ ComStack operations:
 
 Call System Functions:
 
-* Interrupt 0x20: system_call(feature, function) -> error:u32 -- will call into the NeutronCallSystem
+* Interrupt 0x20: system_call(feature, function):variable -> error:u32 -- will call into the NeutronCallSystem
 
 Hypervisor Functions:
 
@@ -97,6 +99,18 @@ Context Functions:
 * Interrupt 0x97: nest_level() -> level:u32 -- The number of times the current contract address is on the ContextStack. For example, the nest_level of A in the case of `A -> B -> C -> A -> D -> A` will be 3.
 * Interrupt 0x98: gas_remaining() -> gas:u64 -- The total amount of gas remaining for the current execution
 * Interrupt 0x99: execution_type() -> type:u32 -- The type of the current execution (see built-in types)
+
+Contract Management Functions:
+
+* Interrupt 0xA0: get_upgrade_count() -> count:u32
+* Interrupt 0xA1: upgrade_code_section(id: u8, bytecode: [u8]):mutable
+* Interrupt 0xA2: upgrade_data_section(id: u8, data: [u8]):mutable
+* Interrupt 0xA3: upgrade_abi_format(new_format: u8):mutable
+* Interrupt 0xA4: upgrade_abi_type(new_type: u64):mutable -- new_type is pushed to the ComStack
+* Interrupt 0xA5: get_data_section(id: u8) -> data: [u8] --there is no code counter type provided because it can be read directly from memory. Data can as well, but may have been modified during execution
+* Interrupt 0xA6: get_address_of_deployer() -> address: NeutronShortAddress
+* Interrupt 0xA7: get_initial_deploy_hash() -> hash: u256
+* Interrupt 0xA8: get_contract_flags() -> flags: u8
 
 System Functions:
 
