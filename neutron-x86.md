@@ -99,18 +99,16 @@ Context Functions:
 * Interrupt 0x97: nest_level() -> level:u32 -- The number of times the current contract address is on the ContextStack. For example, the nest_level of A in the case of `A -> B -> C -> A -> D -> A` will be 3.
 * Interrupt 0x98: gas_remaining() -> gas:u64 -- The total amount of gas remaining for the current execution
 * Interrupt 0x99: execution_type() -> type:u32 -- The type of the current execution (see built-in types)
+* Interrupt 0x9A: execution_permissions() -> permissions:u32 -- The current permissions of the execution (see built-in types)
 
 Contract Management Functions:
 
-* Interrupt 0xA0: get_upgrade_count() -> count:u32
-* Interrupt 0xA1: upgrade_code_section(id: u8, bytecode: [u8]):mutable
-* Interrupt 0xA2: upgrade_data_section(id: u8, data: [u8]):mutable
-* Interrupt 0xA3: upgrade_abi_format(new_format: u8):mutable
-* Interrupt 0xA4: upgrade_abi_type(new_type: u64):mutable -- new_type is pushed to the ComStack
-* Interrupt 0xA5: get_data_section(id: u8) -> data: [u8] --there is no code counter type provided because it can be read directly from memory. Data can as well, but may have been modified during execution
-* Interrupt 0xA6: get_address_of_deployer() -> address: NeutronShortAddress
-* Interrupt 0xA7: get_initial_deploy_hash() -> hash: u256
-* Interrupt 0xA8: get_contract_flags() -> flags: u8
+* Interrupt 0xA0: upgrade_code_section(id: u8, bytecode: [u8]):mutable
+* Interrupt 0xA1: upgrade_data_section(id: u8, data: [u8]):mutable
+* Interrupt 0xA2: upgrade_abi_format(new_format: u8):mutable
+* Interrupt 0xA3: upgrade_abi_type(new_type: u64):mutable -- new_type is pushed to the ComStack
+* Interrupt 0xA4: get_data_section(id: u8) -> data: [u8] --there is no code counter type provided because it can be read directly from memory. Data can as well, but may have been modified during execution
+
 
 System Functions:
 
@@ -228,6 +226,33 @@ The following constants are also defined:
 * CALL -- A call from a transaction or from an external contract into an existing smart contract
 * DEPLOY -- A new smart contract is being deployed
 * ONE_TIME -- A piece of smart contract code is being executed which has not and will not be saved to the blockchain permanently and will not be assigned an account/address 
+
+Execution Permissions can be one or more of the following flags:
+
+* Mutable call -- standard mutable call with no restrictions
+* static call -- A static call which can read external contract and otherwise mutable internal data, but can not modify any data or make mutable calls
+* Pure call -- a restricted pure call which can only read immutable internal data and can not otherwise access any external data and can not modify any data or make any mutable or static calls.
+
+Defined as so:
+
+    EXECUTION_PERMS_MUTABLE     = 1
+    EXECUTION_PERMS_STATIC      = 2
+    EXECUTION_PERMS_PURE        = 4
+
+All smart contract APIs for checking this, should be a bitwise comparison:
+
+    if (permissions & EXECUTION_PERMS_MUTABLE) > 0
+        //capable of doing everything a mutable call can
+    if (permissions & EXECUTION_PERMS_STATIC) > 0
+        //capable of doing everything a static call can
+    if (permissions & EXECUTION_PERMS_PURE) > 0
+        //capable of doing everything a pure call can
+
+Furthermore, in order to express that an execution is mutable (which would incldue the permissions for static and pure) it should be written as so:
+
+    permissions = EXECUTION_PERMS_MUTABLE + EXECUTION_PERMS_STATIC + EXECUTION_PERMS_PURE
+
+All unspecified bits are reserved for future additions to these permissions. In the case of a permission being created that is even more restrictive than "pure", then none of these flags should be set. In the case of a permission being created which gives more power than "mutable", then all of these flags should be set, along with a new flag conveying this new permission.
 
 ## Hypervisor Internal State
 
