@@ -115,9 +115,10 @@ The ContractType field will contain the following information:
 * VMExtra: u16 -- Extra flags etc data which may be used by specific VMs/hypervisors
 * Flags: u8 -- Various flags for it's execution which do not rely on the hypervisor/VM type.
 
+
 The ContractType field will be held in the state key: `00 01`
 
-The VMVersion field is defined as so, in Rust:
+The NeutronVersion field is defined as so, in Rust:
 
     pub struct NeutronVersion{
         pub format: u8,
@@ -146,12 +147,15 @@ blockchain_version shall be one of the following:
 
 Note: blockchain version must match the blockchain being used as a consensus rule. ie, it is not possible to use Qtum Testnet formed addresses on Qtum Mainnet. 
 
+Note that in the case of bare smart contract executions which are not given an address, or in the case of smart contract creation, the NeutronVersion field should be pushed before the ContractType field in the smart contract creation ABI
+
 Proposed flags:
 
 * Upgradeable -- Can update it's own deployed bytecode
 * Stateless -- The contract can store no global storage state, aside from it's own bytecode. Noteably it can read external smart contract state.
 * PureContract -- Every execution of this smart contract should be assumed to be pure, with no side effects. (requires Upgradeable, Stateless, and NonPayable flag)
 * NonPayable -- This smart contract should never be capable of holding coins
+
 
 Note it is not possible to modify ContractType after a smart contract has been deployed.
 
@@ -186,4 +190,15 @@ None yet, this will require thoughts about identifier standards.
 ContractStatus can be modified, but not without restrictions. Specifically, only ABIFormat and ABIType fields may be updated and requires a hypervisor specific upgrade method. This can not be modified in stateless, pure, or non-upgradeable smart contracts
 
 Note: In stateless blockchain models which do not incorporate a state database, all of these may be left at default values. 
+
+Finally, the DeploymentInfo structure is data which is determined at deployment time of a smart contract and can otherwise not be modified.
+
+* DeploymentUTXO: [u8:40] -- The UTXO ID which deployed the current smart contract code. (TBD is this needed?)
+* InitialDeploymentHash: u256 -- A hash of the data which was used for the deployment of a transaction. Includes things like NeutronVersion, hypervisor specific data, and constructor input data. Used for "sub" contract deployment address generation
+* DeployedFrom: UniversalShortAddress -- The responsible party or contract for this address. For "responsible party", the first spent UTXO is used as the "creator". For a smart contract, the smart contract which directly made the Element API call to create or clone this contract. 
+
+The DeploymentInfo state will be held in the key: `00 03`
+
+The InitialDeploymentHash uses the NeutronABI "flat" variant for constructing the hash. Specifically, it takes the entire stack at the time of smart contract construction, converts it into NeutronABI Flat variant data, and then hashes the resulting data. Thus, it is essential for consistency to ensure that extra items are not on the stack when a smart contract is created, as this will also be included into this hash. 
+
 

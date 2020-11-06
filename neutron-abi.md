@@ -95,3 +95,69 @@ Then finally the text is double sha256 hashed and the bottom 4 bytes of the resu
 ## ElementAPI Variant 
 
 The NeutronABI is used for ElementAPI calls, but with the exclusion of a FunctionID being placed on the stack, and the FunctionID being unused here. Instead a specific Element Function Number is used when doing the system_call operation, with input data being the top thing on the stack at that point. 
+
+
+## Smart Contract Creation
+
+The following items should be on the state for creating a smart contract: (in pop order)
+
+* NeutronVersion
+* ContractType 
+* Hypervisor specific data...
+* Constructor inputs
+
+In the case of qx86 smart contracts:
+
+* NeutronVersion
+* ContractType
+* Code section count
+* Code sections...
+* Data section count
+* Data sections...
+* Constructor inputs
+
+## Smart Contract Bare Execution
+
+The following items should be on the state for executing a bare smart contract: (in pop order)
+
+* NeutronVersion
+* ContractType 
+* Hypervisor specific data...
+* Execution inputs
+
+In the case of qx86 smart contracts:
+
+* NeutronVersion
+* ContractType
+* Code section
+* Data section
+* Execution inputs
+
+# NeutronABI Flat Variant
+
+In some cases, NeutronABI data may need to be held within a single data item or otherwise "flattened" into a simple array of bytes. This is done by using little endian encoded length prefixes (in the current case, 16 bit but if element limits were increased, it might be 32 bit) and encoding the data in push order. In this case, the following data (in pop order) would be encoded as so:
+
+(assume inputs here are big endian encoded for simplicity)
+* 0x1234
+* 0x0000_0001
+* 0xFF
+* (empty item)
+* 0x10
+
+(note this is in byte order and little endian encoding is used for size prefixes)
+    0100 -- 1 item size
+    10 -- bottom element
+    0000 -- 0 item size
+    0100 -- 1 item size
+    FF -- next element
+    0400 -- 4 item size
+    00000001 -- next element
+    0200 -- 2 item size
+    1234 -- top element
+
+With a final encoding, with bytes encoded left to right. 
+
+    01001000000100FF04000000000102001234
+
+
+
