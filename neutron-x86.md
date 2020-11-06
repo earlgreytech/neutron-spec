@@ -229,6 +229,13 @@ The following constants are also defined:
 * DEPLOY -- A new smart contract is being deployed
 * ONE_TIME -- A piece of smart contract code is being executed which has not and will not be saved to the blockchain permanently and will not be assigned an account/address 
 
+## Hypervisor Internal State
 
+All qx86 internal state has a prefix of `01`. It specifically stores the following state:
+
+* `0100` - `010F` -- code section state
+* `0110` - `011F` -- data section state
+
+Note that this state is affected by state rent and is restored via the typical methods and persisted by actually using the code/data sections within a smart contract execution.
 
 
