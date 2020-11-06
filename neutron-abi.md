@@ -89,6 +89,7 @@ Specifically the text is first modified:
 * spaces are removed
 * output arguments will always have parentheses around them (even when just one output)
 * "v1 " is added to the beginning of the argument to form an ABI version number for the function. Because spaces are otherwise illegal, this can not be user modified by intricate function names etc.
+* The function name is converted to well formed UTF-8 hex data
 
 Then finally the text is double sha256 hashed and the bottom 4 bytes of the resulting hash extracted to form the final FunctionID
 
