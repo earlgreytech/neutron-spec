@@ -152,9 +152,10 @@ Note that in the case of bare smart contract executions which are not given an a
 Proposed flags:
 
 * Upgradeable -- Can update it's own deployed bytecode
-* Stateless -- The contract can store no global storage state, aside from it's own bytecode. Noteably it can read external smart contract state.
+* Stateless -- The contract can store no global storage state, aside from it's own bytecode. Noteably it can read external smart contract state and cause mutable side effects in other smart contracts by calling them
 * PureContract -- Every execution of this smart contract should be assumed to be pure, with no side effects. (requires Upgradeable, Stateless, and NonPayable flag)
 * NonPayable -- This smart contract should never be capable of holding coins
+* (optional/Qtum only) ApprovalContract -- Only valid on bare contract executions. Indicates that the execution will opt-in for ApprovalContract behavior
 
 
 Note it is not possible to modify ContractType after a smart contract has been deployed.
