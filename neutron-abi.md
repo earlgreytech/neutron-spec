@@ -160,5 +160,18 @@ With a final encoding, with bytes encoded left to right.
 
     01001000000100FF04000000000102001234
 
+# NeutronABI Function Modifiers
+
+Similar to the ElementAPI specifications, it is possible to postfix a function modifier to indicate the type of permissions needed for the function. Specific modifiers include:
+
+* static
+* pure (assumes nonpayable)
+* nonpayable
+* mutable (the default if no modifier is present)
+
+Examples:
+
+    do_computation(input: u32):pure -> result: u32
+    do_something(input: u32):static,nonpayable -> result: u64
 
 

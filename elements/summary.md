@@ -19,7 +19,9 @@ If version in this case is 0, then the function is not implemented. Any other va
 
 This function shall be used rather than speculative execution (ie, pushing inputs and then checking if the error indicates the function did not exist) to save on gas costs and also because an unimplemented function will mean that the stack is returned in a dirty state, as the Element API does not understand how to remove only the given inputs. 
 
-Calling any function_exists Element API function shall be a free function in terms of gas costs. 
+Calling any function_exists Element API function shall be a free function in terms of gas costs. C
+
+Calling function_exists on an element which is not supported will not return a 0 version, but rather give an error which will indicate the element is not supported. Usage of the API for this purpose to detect supported Elements shall also be gas-free. 
 
 Standard Tracts:
 
@@ -30,5 +32,5 @@ Standard Tracts:
 Provisions:
 
 * Mandatory -- All implementations of Neutron must implement these functions
-* Recommended -- This is recommended functionality and typically lightweight things to adapt
+* Recommended -- This is recommended functionality and typically lightweight things to adapt for most blockchains
 * Optional -- These tend to depend on blockchain design or may be more involved or with less usefulness, and thus may be excluded from some blockchain implementations of Neutron
