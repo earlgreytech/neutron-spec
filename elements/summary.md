@@ -21,3 +21,14 @@ This function shall be used rather than speculative execution (ie, pushing input
 
 Calling any function_exists Element API function shall be a free function in terms of gas costs. 
 
+Standard Tracts:
+
+* Neutron Standard -- These are standard Neutron functions which should not rely on any particular blockchain design, though not all of these are mandatory
+* Neutron Account Tract -- These are Neutron functions which rely on an account based blockchain model, or an account abstracted model (as implemented in Qtum)
+* Neutron UTXO Tract -- These are Neutron functions which rely on a UTXO based blockchain model
+
+Provisions:
+
+* Mandatory -- All implementations of Neutron must implement these functions
+* Recommended -- This is recommended functionality and typically lightweight things to adapt
+* Optional -- These tend to depend on blockchain design or may be more involved or with less usefulness, and thus may be excluded from some blockchain implementations of Neutron
