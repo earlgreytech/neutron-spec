@@ -166,7 +166,7 @@ Similar to the ElementAPI specifications, it is possible to postfix a function m
 
 * static
 * pure (assumes nonpayable)
-* nonpayable
+* payable
 * mutable (the default if no modifier is present)
 
 Examples:
@@ -174,4 +174,4 @@ Examples:
     do_computation(input: u32):pure -> result: u32
     do_something(input: u32):static,nonpayable -> result: u64
 
-
+Note that modifiers are not used when computing function IDs and thus are only for the sake of ABI code generation and programmer reference.
