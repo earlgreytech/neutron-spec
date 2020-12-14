@@ -4,7 +4,7 @@ This element provides a method by which external (or internal) smart contracts c
 
 ABI Information
 
-Element ID: 2
+Element ID: 6
 Type: Neutron Standard
 Provision: Optional -- Although requires minimal integration effort from the blockchain, this may involve high complexity and difficult to security review code
 
