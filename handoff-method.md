@@ -115,10 +115,14 @@ Every operation includes the following info attached:
 
 Protobuf definitions:
 
+    message NeutronAddress{
+        uint type;
+        bytes data;
+    }
     message BlockInfo{
         uint64 height;
         message Creators{
-            bytes address;
+            NeutronAddress address;
             int shares;
         }
         repeated Creators creators;
@@ -132,12 +136,12 @@ Protobuf definitions:
     message TxInfo{
         uint64 block_creator_tip;
         message Vin{
-            bytes address;
+            NeutronAddress address;
             uint64 value;
         }
         repeated Vin vins;
         message Vout{
-            bytes address;
+            NeutronAddress address;
             uint64 value;
             optional bytes neutron_data;
         }
@@ -150,11 +154,12 @@ Protobuf definitions:
         bytes neutrondb_proof;
         uint64 gas_consumed;
         message CondensingOutputs{
-            bytes address;
+            NeutronAddress address;
             uint64 value;
         }
         repeating CondensingOutputs utxo_outputs;
     }
+
 
 
 
