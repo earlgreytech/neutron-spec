@@ -113,6 +113,49 @@ Every operation includes the following info attached:
 * forkid -- used for modifying behavior of Neutron in the case of a fork
 * contextid -- used for tracking a top level context. Created  by create_context. Destroyed by commit_context and destroy_context
 
+Protobuf definitions:
+
+    message BlockInfo{
+        uint64 height;
+        message Creators{
+            bytes address;
+            int shares;
+        }
+        repeated Creators creators;
+        int shares_per_block;
+        uint64 difficulty;
+        uint64 time;
+        int consensus_type;
+        int target_spacing;
+    }
+
+    message TxInfo{
+        uint64 block_creator_tip;
+        message Vin{
+            bytes address;
+            uint64 value;
+        }
+        repeated Vin vins;
+        message Vout{
+            bytes address;
+            uint64 value;
+            optional bytes neutron_data;
+        }
+        repeated Vout vouts;
+        uint64 gas_limit;
+        uint64 gas_price;
+    }
+
+    message BlockExecutionResult{
+        bytes neutrondb_proof;
+        uint64 gas_consumed;
+        message CondensingOutputs{
+            bytes address;
+            uint64 value;
+        }
+        repeating CondensingOutputs utxo_outputs;
+    }
+
 
 
 
@@ -148,6 +191,7 @@ In addition to this, the rent data structures would be extended to include "prev
 ## RPC Integration Design (non-consensus)
 
 The RPC layer of Qtum Core needs to be modified to be capable of generating Neutron transactions. Preferably, the majority of this Neutron knowledge is outsourced, with Qtum Core only receiving blobs of data without needing to understand them. 
+
 
 
 
