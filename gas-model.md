@@ -24,6 +24,8 @@ Standard VM operation costs:
 * MEDIUM_COST_OPCODE
 * HIGH_COST_OPCODE
 * VERY_HIGH_COST_OPCODE
+* PREDICTABLE_BRANCH_OPCODE
+* UNPREDICTABLE_BRANCH_OPCODE
 * COPY_INTO_VM_MEMORY -- charge per byte copied into VM memory
 * COPY_FROM_VM_MEMORY -- charge per byte copied from VM memory
 * MEMORY_READ_COST -- charge per byte of memory read within the VM
