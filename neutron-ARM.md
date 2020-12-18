@@ -59,6 +59,7 @@ ComStack operations:
 * SVC 0x17: comstack_memory_remaining() -> size:u32 -- will get the remaining total size that is allowed to be used within this execution
 * SVC 0x18: comstack_item_limit_remaining() -> size:u32 -- will get the total remaining number of items that can be pushed onto the stack
 * SVC 0x19: comstack_clear() -- Will clear the stack completely, without giving any information about what was held on the stack
+* SVC 0x1A: peek_partial_comstack(buffer, begin, max_size) -> actual_amount_read: u32 -- will read only a partial amount of data from an SCCS item in the middle of the item's data (starting at 'begin')
 
 Call System Functions:
 
@@ -96,9 +97,9 @@ System Functions:
 * SVC 0xFE: revert_execution(status) -> noreturn -- Will revert the current execution, moving up the chain of execution to return to the previous contract, and reverting all state changes which occured within the current execution
 * SVC 0xFF: exit_execution(status) -> noreturn -- Will exit the current execution, moving up the chain of execution to return to the previous contract. State changes will only be committed if the entire above chain of execution also exits without any reverting operations. 
 
-## x86 Memory Map
+## ARM Memory Map
 
-The x86 memory map is as follows:
+The ARM memory map is as follows:
 
 * 0x10000, immutable, first code memory
 * 0x20000, immutable, second code memory
@@ -106,7 +107,7 @@ The x86 memory map is as follows:
 * 0x80010000, mutable, first data memory
 * 0x80020000, mutable, second data memory
 * ... up to 16 data memories
-* 0x81000000, 8Kb, mutable, stack memory (for the x86 stack)
+* 0x81000000, 8Kb, mutable, stack memory (for the ARM stack)
 * 0x82000000, ??? size, mutable, aux memory, loaded always as 0 and can be used as an extra RAM area
 
 ## Internal State
