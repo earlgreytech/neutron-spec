@@ -8,32 +8,56 @@ The ABI is simple, yet powerful by design with just enough complexity to facilia
 
 The name format is as follows:
 
-    type[namespace]keyname -> data
+    .[[@/~][number]namespace].[@/~][number]keyname -> [type]data
 
 Type is one of the following values:
 
-* f -- function ID (see reserved keys)
-* b -- bool (0 = false, all other values are true)
-* c -- u8
-* s -- u16
-* i -- u32
-* l -- u64
-* z -- u256
-* h -- h256, 256bit hash (u256 alias)
-* a -- address
-* v -- [u8]
-* C -- i8
-* S -- i16
-* I -- i32
-* L -- i64
-* s -- string ([u8] alias)
-* u -- UTF-8 string
-* x -- extension (followed by one or more type indication characters, treated as [u8] otherwise)
-* X -- Neutron specific data extension (encodes some commonly used structures)
-* . -- reserved for system use
-* @? -- [short][type], used for unnamed keys (such as pieces of an array), with the type name following the !, such as `@z` to create an array of hashes, like `@?z.hashes` with a numerical, non-ASCII byte added after the `@` character (replacing the ? character)
-* ~? -- [long][type], used for unnamed keys in the same way as `@` but where the number of keys could exceed 256 and thus a 16 bit integer should be used for the counting. Note the counting number is treated as a little endian u16 type.
-* any other character is treated as [u8]
+* 0 -- u8
+* 1 -- i8
+* 2 -- u16
+* 3 -- i16
+* 4 -- u32
+* 5 -- i32
+* 6 -- u64
+* 7 -- i64
+* 8 -- u128
+* 9 -- i128
+* 10 -- u256
+* 11 -- i256
+* 12 -- u512
+* 13 -- i512
+* 14 -- u1024
+* 15 -- i1024
+* 16-31 -- reserved
+* 32 -- [u8]
+* 33 -- [i8]
+* 34 -- [u16]
+* 35 -- [i16]
+* 36 -- [u32]
+* 37 -- [i32]
+* 38 -- [u64]
+* 39 -- [i64]
+* 40 -- [u128]
+* 41 -- [i128]
+* 42 -- [u256]
+* 43 -- [i256]
+* 44-63 reserved
+* 64 -- NeutronAddress
+* 65 -- NeutronLongAddress
+* 66 -- NeutronVersion
+* 67 -- ASCII string
+* 68 -- UTF-8 string
+* 69 -- Function ID 
+* 70 -- big endian u256 (for compatibility with ETH displaying of u256 values)
+* 71 -- big endian u160
+* 72 -- Bitcoin style address (will display as base58)
+* 128 - 195 -- Extension types (can be defined by community/users), treated as [u8] if not implemented
+* 196-227 -- One byte extension types (can be defined by community/users). Following byte is used for more type information
+* 228-243 -- Two byte extension types (can be defined by community/users). Following two bytes are used for more type information
+* 244-252 -- Four byte extension types (can be defined by community/userS). Following four bytes are used for more type information
+* 253 -- Reserved
+* 254 -- Variable length extension. Followed by a single byte length field, and then the following bytes up to that length encodes the full type information.
+* 255 -- Unknown/Generic
 
 
 The namespace portion of the key is `.` for the "root" namespace. The `..` namespace is reserved for system use. Such keys can not be written by smart contracts. Otherwise, every namespace must begin and end with `.`. The namespace concept has no fixed use case, but has significant potential to improve the extensibility of ABIs. Examples:
@@ -47,32 +71,41 @@ With the CoMap concept combined with this ABI, it is trivial to not only send mu
 
 ## Key encoding
 
-All keys and string data are treated strictly as ASCII strings, and displayed accordingly in UI etc. UTF-8 string data is not validated and is "best attempt" decoded for display. For display purposes, all type prefixes should be removed if possible before displaying the key name.
+All keys are treated strictly as ASCII strings, and displayed accordingly in UI etc. The "z/Z" prefix is used to indicate a key name forms an array. In order to prevent the complexities of BCD from being required, this is the one exception to ASCII key namees.
 
-The only exception to the ASCII-only policy in key names is when using the `@` or `~` type variant is used. With these types, the 2nd (and 3rd in the case of `~`) byte are removed along with the type prefix before display. Ideally, the display represents an element like `@?z.structure.hash` as so:
+Every key part is prefixed by `.`, if the next character is either `@` or `~` then it indicates that it forms an array. The character after the `@` or `~` is treated as either an unsigned byte, or unsigned word, respectively, to indicate an array element.
 
-* [0]structure.hash 
-* [1]structure.hash
-* etc
-
+There is no searching across keys available in the CoMap concept, so there should be a count as well. This is represented by using the character `#` as the prefix of the key. The data in the key should be either u8 or u16 typed. If there are less array elements then this number indicates, then it can be assumed the missing elements are null (ie, Option::None in Rust terms)
 
 
 ## Reserved Keys And Guidelines
 
-* Every key that has a prefix of "." has a reserved system use and can be read from smart contracts, but can not be written to
-* No key shall have a prefix of `[`. In such a case, the key would be rejected from being added
 * Every key that has a `$` namespace is for system use only. It may be stripped or otherwise modified and can not be read from smart contracts, but can be written from smart contracts
-* The key `f.` is the function ID which is to be called. It is allowed, but not defined/implemented to have multiple function calls like `f.1`, `f.2` etc
+* The key `.*fn` is the function ID which is to be called. It is allowed, but not defined/implemented to have multiple function calls like `f.1`, `f.2` etc
 * The key "c.abi" is used for custom extensions or where ABI versioning is required. This has no impact on NeutronABI implementations, but is a specifically reserved key
-* Keys which begin with ! are reserved for unnamed keys
-* It is not enforced by consensus, but the following characters should not be used in key names:
+* A key prefix of `!` indicates a Neutron specific input. It can be written to by smart contracts, but can not be read from smart contracts. It's exact data may be modified in transit etc
+* A key prefix of `?` indicates a Neutron specific output. It can be read from a smart contract, but can not be written to. It's exact data is determined by the Neutron subsystems
+* A key prefix of `%` indicates a reserved Neutron value. Such keys can not be read nor written to by smart contracts
+* All user keys should start with `.`, this may be a consensus enforced restriction
+* Namespaces can be nested. This can be used for namespaces as well as for forming simple loosely typed structures. For instance, this key name is valid `.v2.z[0]SendingData.Form`. This would be the struct "sending data" (as an array), located in the v2 namespace, and with the key name of "form". 
+* It is not enforced by consensus, but the following characters should not be used in user key names. This may or may not be enforced by consensus:
     * "
     * '
     * []
-    * #
+    * !
+    * $
+    * %
+    * ^
+    * `*` -- note: can only be used for the `.*fn` function indicator
+    * ()
+    * /
+    * |
+    * \
+    * ;
+    * <>
+    * ,
     * `
-* All structures are displayed in a "flat" way. Thus, it's not possible to have something like `structure[2].sub[10].data`. Instead, such a thing would be displayed like `[20]structure.sub.data`. If absolute sub structure arrays like this are required, then the key should name it explicitly `structure.2.sub.10.data`, though this comes with significant impacts in how keys can be scanned efficiently, and ASCII integers should be used
-* If empty array elements are desired, then `.count` should be suffixed to the name of an array and used as the key. There is otherwise no method of searching across the map via wildcard or other methods
+    * ?
 
 ## FunctionID
 
@@ -88,10 +121,7 @@ FunctionIDs can be used by the ABI Helper element for easier mapping that does t
 
 The NeutronABI is used for ElementAPI calls, but with the exclusion of a FunctionID being placed in the map. Instead a specific Element Function Number is used when doing the system_call operation, and with CoMap being used for all parameter data
 
-## Unnamed keys
-
-It is possible to emulate a stack for easier usage of variable numbers of parameters. Specifically, these unnamed keys can only be accessed via push, pop, and peek. 
-
+If the Element function number is 0xFFFF_FFFF, then the `.*fn` CoMap key is used to select the function (note: this may not be supported for all Elements)
 
 # Flat and Semi-flat ABI Encoding
 
@@ -100,11 +130,11 @@ In certain cases, such as in transaction data, there may not be specific support
 The format of such data is as so:
 
 * length of key name
-* key name (which includes type name, namespace, etc)
+* key name (which includes namespace, array number, etc)
 * length of data
-* data
+* data (including type data)
 
-This flat data will be decoded by Neutron and put into the ABI mappings
+This flat data will be decoded by Neutron and put into the CoMap structure
 
 
 ## Smart Contract Creation
@@ -118,13 +148,17 @@ The following items should be contained in the CoMap:
 
 In the case of ARM contracts:
 
-* `Xv$` -> NeutronVersion
-* `Xt$` -> ContractType
-* `v$code` -> primary code section
-* `v$data` -> primary data section
-* `@?v$code` -> Extra Code sections...
-* `@?v$data` -> Extra Data sections...
+* `!.v` -> NeutronVersion
+* `!.t` -> ContractType
+* `!.c` -> primary code section
+* `!.d` -> primary data section
+* `!.#extra_code` -> Extra code section count
+* `!.@extra_code` -> Extra Code sections...
+* `!.#extra_data` -> Extra data section count
+* `!.@extra_data` -> Extra Data sections...
 * Constructor inputs
+
+If #extra_code and/or #extra_data is missing, then it is assumed that there is no such sections
 
 ## Smart Contract Bare Execution
 
@@ -137,10 +171,10 @@ The following items should be on the state for executing a bare smart contract: 
 
 In the case of qx86 smart contracts:
 
-* `Xv$` -> NeutronVersion
-* `Xt$` -> ContractType
-* `v$code` -> Code section (note, only one section of each data and code are valid)
-* `v$data` -> Data section
+* `!.v` -> NeutronVersion
+* `!.t` -> ContractType
+* `!.c` -> Code section (note, only one section of each data and code are valid)
+* `!.d` -> Data section
 * Execution inputs
 
 # NeutronABI Function Modifiers
