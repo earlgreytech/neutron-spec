@@ -15,6 +15,10 @@ The following components will be included within this spec:
 * Qtum Integration -- The method by which Neutron is implemented within Qtum will be covered, at least in brief. Some parts of this may be shifted to an alternative spec due to complexity. 
 * Gas Charger (name TBD) -- The component which will track gas schedules and control the costs of each Element method as well as VM operational costs. 
 
+## CoMap
+
+The CoMap is the central piece of communication for almost all things within Neutron. It is used for passing call data into smart contracts, for smart contracts to pass parameter data to Element APIs, and various other uses. It is expected to also be a central point of abuse for smart contracts, and so must be carefully designed to avoid exploits forming here.
+
 
 ## ComStack
 

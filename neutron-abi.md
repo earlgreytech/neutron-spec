@@ -1,120 +1,129 @@
 # NeutronABI
 
-The NeutronABI is a very simple ABI which is used to encode data to and from smart contracts as well as ElementAPIs. 
+The NeutronABI is an ABI which is used to encode data to and from smart contracts as well as ElementAPIs. 
 
-NeutronABI is an optional component for smart contracts, some may use an alternative ABI. However, all ElementAPIs must use NeutronABI. 
+NeutronABI is an optional component for smart contract communication, some may use an alternative ABI. However, all ElementAPIs must use NeutronABI. 
 
-The ABI is very simple by design, more complex extensions to this simple design are possible but are up to interetation by smart contracts. All data is transferred via the ComStack. Each input and output is encoded as a simple item on the stack, there is no packing of multiple items onto the stack. 
+The ABI is simple, yet powerful by design with just enough complexity to faciliate ample opportunity for extension. The map concept that is native to Neutron is codeified into a standardized format for key names:
 
-The following types are defined here, following a Rust-like naming scheme:
+The name format is as follows:
 
-* bool -- treated as u8, but where 0 = false and any other value is true.
-* u/i8 -- single byte
-* u/i16 -- 2 bytes
-* u/i32 -- 4 bytes
-* u/i64 -- 8 bytes
-* u/i256 -- 32 bytes
-* FunctionID -- 4 byte identifier
-* string -- treated the same as unsized[u8]
-* unsized[u8] -- variable size array of bytes
-* sized[u8][n] -- fixed size array of bytes (ABI enforced to be of n size)
-* unsized[u[n]] -- variable size array of items, of size n
-* sized[u[n]][m] -- fixed size array of items, of size n, with a total length of m
-* address -- treated the same as sized[u8][36]
+    type[namespace]keyname -> data
 
-The primitive types of bit size between 8 and 256 bits are simply encoded as a single stack item of the appropriate size. These items must be the exact size or smaller that is specified. If the item is shortened on the stack, then the upper bits are sign extended (ie, for signed negatives, replaced with 1 bits, otherwise and for unsigned integers it is replaced with 0 bits). Empty stack items are treated as 0. FunctionID is treated mostly the same as u32. 
+Type is one of the following values:
 
-unsized[u8] is treated as a single item on the stack of variable size. Thus, this item can be no larger than the ComStack element limit, 64Kb. This item also must be retrieved completely from the stack in whole, or the end truncated, with the x86 hypervisor implementation. sized[u8] is treated the same as unsized[u8], but must be exactly the size specified. 
+* f -- function ID (see reserved keys)
+* b -- bool (0 = false, all other values are true)
+* c -- u8
+* s -- u16
+* i -- u32
+* l -- u64
+* z -- u256
+* h -- h256, 256bit hash (u256 alias)
+* a -- address
+* v -- [u8]
+* C -- i8
+* S -- i16
+* I -- i32
+* L -- i64
+* s -- string ([u8] alias)
+* u -- UTF-8 string
+* x -- extension (followed by one or more type indication characters, treated as [u8] otherwise)
+* X -- Neutron specific data extension (encodes some commonly used structures)
+* . -- reserved for system use
+* @? -- [short][type], used for unnamed keys (such as pieces of an array), with the type name following the !, such as `@z` to create an array of hashes, like `@?z.hashes` with a numerical, non-ASCII byte added after the `@` character (replacing the ? character)
+* ~? -- [long][type], used for unnamed keys in the same way as `@` but where the number of keys could exceed 256 and thus a 16 bit integer should be used for the counting. Note the counting number is treated as a little endian u16 type.
+* any other character is treated as [u8]
 
-unsized[u[n]] is more complicated as it involves multiple stack items. It begins with a simple u16 stack item indicating the size. If the size is 0, then there are no further relevant stack items. Otherwise the size is the number of items following that need to be popped from the stack. Using this mechanism within the ABI, each element within the array must be an exact size, though with the same zero extension properties of primitive integers in the case of a smaller size. The sized[u[n]][m] implementation is treated the same as the unsized variant, but does not include a u16 stack item indicating the total length, as the length is explicitly specified within the ABI. Each element given as an empty stack item is treated as an array of 0 of the appropriate "n" size.
 
-Strings are "flat" arrays of UTF-8 character data with no preceding count of characters nor null termination. This means they are neither pascal style strings nor C style strings. Their length is known by the ComStack as the size of an item is encoded within the stack. All UTF-8 parsing of strings for display in Element APIs they should be considered lossy and best-effort. Invalid UTF-8 strings will be best-effort parsed and should not result in any smart contract visible error. Note that any consensus-visible parsing of these strings must remain consistent however to always give the same style of error handling in the case of an invalid UTF-8 string. 
+The namespace portion of the key is `.` for the "root" namespace. The `..` namespace is reserved for system use. Such keys can not be written by smart contracts. Otherwise, every namespace must begin and end with `.`. The namespace concept has no fixed use case, but has significant potential to improve the extensibility of ABIs. Examples:
 
-This ABI can be textually represented using Rust-like function signatures. Some examples:
+* Versioning of ABI calls can be done, such as by specifying `.v2.`. This allows the same function to be used for both v1 and v2 parameters and behavior
+* Custom extensions to existing functions, such as by specifying the contract's name `.mydapp.`. This allows for a standardized function to be extended with new or unique behavior for callers that are aware of these extensions
+* Anti-passthrough parameters passed to other functions. For example, if a contract is called by a user who intends to call another contract down the line, a namespace like `.rootContract.` could be used, with this root contract interpreting the parameters as needed, and stripping them off of the map before passing-through to the next contract call. 
+* Structures are easily built up like `c.prefix_info.character` and `a.prefix_info.owner` where both owner and character belong to the prefix_info "structure". 
 
-* `check_balance(check_address: address, tokenid: u8) -> balance: u64`
-* `upload_balances(balance_list: unsized[u[44]]) -> success:bool` -- note that the u[44] here could represent a struct of form {address, u64}
-* `get_data(id: u32) -> (data:unsized[u8], owner: address)`
+With the CoMap concept combined with this ABI, it is trivial to not only send multiple pieces of data as parameters into calling contracts, but to also return multiple pieces of data as results from the called contract. The same ABI rules apply. 
 
-The exact order of the stack from the perspective of these function signatures is in pop order from left to right for inputs, and pop order for the outputs. They are in otherwise from the perspective of the function being called for inputs, and the callee for outputs. 
+## Key encoding
 
-## Examples
+All keys and string data are treated strictly as ASCII strings, and displayed accordingly in UI etc. UTF-8 string data is not validated and is "best attempt" decoded for display. For display purposes, all type prefixes should be removed if possible before displaying the key name.
 
-Given the following smart contract function: `get_data(set: u8, id: u32) -> (data: unsized[u8], owner: address)`
+The only exception to the ASCII-only policy in key names is when using the `@` or `~` type variant is used. With these types, the 2nd (and 3rd in the case of `~`) byte are removed along with the type prefix before display. Ideally, the display represents an element like `@?z.structure.hash` as so:
 
-The expected way the function would be parsed by the called smart contract is as so:
+* [0]structure.hash 
+* [1]structure.hash
+* etc
 
-* pop get_data functionID
-* pop set u8
-* pop id u32
 
-And to construct it's set of outputs, it would then place items to the stack in the following order:
 
-* push owner address
-* push data unsized[u8]
+## Reserved Keys And Guidelines
 
-Likewise, in order to call this function, the order of operations would be as so:
-
-* push id u32 value
-* push set u8 value
-* push get_data functionID
-* execute external call to contract
-* pop data unsized[u8] to local variable
-* pop owner address to local variable
-
-As an example, take the more complex example: `do_calculation(input: unsized[u[32]]) -> (output: unsigned[u[u32]], error: u32)` where the input length is 2 and the output length is 3. The method for calling this function would be as so:
-
-* push input item 2
-* push input item 1
-* push input length of 2
-* push functionID for do_calculation
-* execute external call
-* pop error into local variable
-* pop length of output into local variable (and use for allocation etc)
-* pop output item 1
-* pop output item 2
-* pop output item 3
+* Every key that has a prefix of "." has a reserved system use and can be read from smart contracts, but can not be written to
+* No key shall have a prefix of `[`. In such a case, the key would be rejected from being added
+* Every key that has a `$` namespace is for system use only. It may be stripped or otherwise modified and can not be read from smart contracts, but can be written from smart contracts
+* The key `f.` is the function ID which is to be called. It is allowed, but not defined/implemented to have multiple function calls like `f.1`, `f.2` etc
+* The key "c.abi" is used for custom extensions or where ABI versioning is required. This has no impact on NeutronABI implementations, but is a specifically reserved key
+* Keys which begin with ! are reserved for unnamed keys
+* It is not enforced by consensus, but the following characters should not be used in key names:
+    * "
+    * '
+    * []
+    * #
+    * `
+* All structures are displayed in a "flat" way. Thus, it's not possible to have something like `structure[2].sub[10].data`. Instead, such a thing would be displayed like `[20]structure.sub.data`. If absolute sub structure arrays like this are required, then the key should name it explicitly `structure.2.sub.10.data`, though this comes with significant impacts in how keys can be scanned efficiently, and ASCII integers should be used
+* If empty array elements are desired, then `.count` should be suffixed to the name of an array and used as the key. There is otherwise no method of searching across the map via wildcard or other methods
 
 ## FunctionID
 
-FunctionID is specified as a hash of the simplified function signature.
+FunctionID is more simply an interface name and a function name of the following format:
 
-For the function definition of `get_data(set: u8, id: u32) -> (data: unsized[u8], owner: address)`, the FunctionID would be constructed as so:
+    [interface].function
 
-    Bottom 4 bytes of the result of `sha256(sha256("v1 get_data(u8,u32)->(unsigned[u8],address)"))`
+Thus, non-interface functions should be prefixed with `.`
 
-Specifically the text is first modified:
-
-* input and output names are removed
-* spaces are removed
-* output arguments will always have parentheses around them (even when just one output)
-* "v1 " is added to the beginning of the argument to form an ABI version number for the function. Because spaces are otherwise illegal, this can not be user modified by intricate function names etc.
-* The function name is converted to well formed UTF-8 hex data
-
-Then finally the text is double sha256 hashed and the bottom 4 bytes of the resulting hash extracted to form the final FunctionID
+FunctionIDs can be used by the ABI Helper element for easier mapping that does the string comparisons in native code??
 
 ## ElementAPI Variant 
 
-The NeutronABI is used for ElementAPI calls, but with the exclusion of a FunctionID being placed on the stack, and the FunctionID being unused here. Instead a specific Element Function Number is used when doing the system_call operation, with input data being the top thing on the stack at that point. 
+The NeutronABI is used for ElementAPI calls, but with the exclusion of a FunctionID being placed in the map. Instead a specific Element Function Number is used when doing the system_call operation, and with CoMap being used for all parameter data
+
+## Unnamed keys
+
+It is possible to emulate a stack for easier usage of variable numbers of parameters. Specifically, these unnamed keys can only be accessed via push, pop, and peek. 
+
+
+# Flat and Semi-flat ABI Encoding
+
+In certain cases, such as in transaction data, there may not be specific support for map style data to be stored, and thus it is necessary to encode this data using a flat or semi-flat ABI. Where flat would be a single contiguous stream of bytes, and semi-flat would be an array of byte streams (such as a stack). In Qtum specifically, the flat method will be used for encoding such ABI data within Qtum transactions.
+
+The format of such data is as so:
+
+* length of key name
+* key name (which includes type name, namespace, etc)
+* length of data
+* data
+
+This flat data will be decoded by Neutron and put into the ABI mappings
 
 
 ## Smart Contract Creation
 
-The following items should be on the state for creating a smart contract: (in pop order)
+The following items should be contained in the CoMap:
 
 * NeutronVersion
 * ContractType 
 * Hypervisor specific data...
 * Constructor inputs
 
-In the case of qx86 smart contracts:
+In the case of ARM contracts:
 
-* NeutronVersion
-* ContractType
-* Code section count
-* Code sections...
-* Data section count
-* Data sections...
+* `Xv$` -> NeutronVersion
+* `Xt$` -> ContractType
+* `v$code` -> primary code section
+* `v$data` -> primary data section
+* `@?v$code` -> Extra Code sections...
+* `@?v$data` -> Extra Data sections...
 * Constructor inputs
 
 ## Smart Contract Bare Execution
@@ -128,37 +137,11 @@ The following items should be on the state for executing a bare smart contract: 
 
 In the case of qx86 smart contracts:
 
-* NeutronVersion
-* ContractType
-* Code section
-* Data section
+* `Xv$` -> NeutronVersion
+* `Xt$` -> ContractType
+* `v$code` -> Code section (note, only one section of each data and code are valid)
+* `v$data` -> Data section
 * Execution inputs
-
-# NeutronABI Flat Variant
-
-In some cases, NeutronABI data may need to be held within a single data item or otherwise "flattened" into a simple array of bytes. This is done by using little endian encoded length prefixes (in the current case, 16 bit but if element limits were increased, it might be 32 bit) and encoding the data in push order. In this case, the following data (in pop order) would be encoded as so:
-
-(assume inputs here are big endian encoded for simplicity)
-* 0x1234
-* 0x0000_0001
-* 0xFF
-* (empty item)
-* 0x10
-
-(note this is in byte order and little endian encoding is used for size prefixes)
-    0100 -- 1 item size
-    10 -- bottom element
-    0000 -- 0 item size
-    0100 -- 1 item size
-    FF -- next element
-    0400 -- 4 item size
-    00000001 -- next element
-    0200 -- 2 item size
-    1234 -- top element
-
-With a final encoding, with bytes encoded left to right. 
-
-    01001000000100FF04000000000102001234
 
 # NeutronABI Function Modifiers
 
@@ -172,7 +155,7 @@ Similar to the ElementAPI specifications, it is possible to postfix a function m
 
 Examples:
 
-    do_computation(input: u32):pure -> result: u32
-    do_something(input: u32):static,payable -> result: u64
+    do_computation:pure
+    do_something:static,payable
 
 Note that modifiers are not used when computing function IDs and thus are only for the sake of ABI code generation and programmer reference.
