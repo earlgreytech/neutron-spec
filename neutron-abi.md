@@ -51,6 +51,9 @@ Type is one of the following values:
 * 70 -- big endian u256 (for compatibility with ETH displaying of u256 values)
 * 71 -- big endian u160
 * 72 -- Bitcoin style address (will display as base58)
+* 73 -- big endian u512
+* 74 -- big endian u1024
+* 75 -- big endian u2048
 * 128 - 195 -- Extension types (can be defined by community/users), treated as [u8] if not implemented
 * 196-227 -- One byte extension types (can be defined by community/users). Following byte is used for more type information
 * 228-243 -- Two byte extension types (can be defined by community/users). Following two bytes are used for more type information
@@ -68,6 +71,8 @@ The namespace portion of the key is `.` for the "root" namespace. The `..` names
 * Structures are easily built up like `c.prefix_info.character` and `a.prefix_info.owner` where both owner and character belong to the prefix_info "structure". 
 
 With the CoMap concept combined with this ABI, it is trivial to not only send multiple pieces of data as parameters into calling contracts, but to also return multiple pieces of data as results from the called contract. The same ABI rules apply. 
+
+All integer types unless indicated are displayed as little endian numbers
 
 ## Key encoding
 
@@ -87,7 +92,7 @@ There is no searching across keys available in the CoMap concept, so there shoul
 * A key prefix of `?` indicates a Neutron specific output. It can be read from a smart contract, but can not be written to. It's exact data is determined by the Neutron subsystems
 * A key prefix of `%` indicates a reserved Neutron value. Such keys can not be read nor written to by smart contracts
 * All user keys should start with `.`, this may be a consensus enforced restriction
-* Namespaces can be nested. This can be used for namespaces as well as for forming simple loosely typed structures. For instance, this key name is valid `.v2.z[0]SendingData.Form`. This would be the struct "sending data" (as an array), located in the v2 namespace, and with the key name of "form". 
+* Namespaces can be nested. This can be used for namespaces as well as for forming simple loosely typed structures. For instance, this key name is valid `.v2.@[0]SendingData.Form`. This would be the struct "sending data" (as the 0th element of an array), located in the v2 namespace, and with the key name of "form". 
 * It is not enforced by consensus, but the following characters should not be used in user key names. This may or may not be enforced by consensus:
     * "
     * '
@@ -106,6 +111,7 @@ There is no searching across keys available in the CoMap concept, so there shoul
     * ,
     * `
     * ?
+* It is not always necessary to include a `#` count input for an array. If the array is contiguous with no missing elements, then it can simply be iterated over starting from 0, and will assume that the first missing item found indicates the end of the array.
 
 ## FunctionID
 
