@@ -2,7 +2,46 @@
 
 The NeutronABI is an ABI which is used to encode data to and from smart contracts as well as ElementAPIs. 
 
-NeutronABI is an optional component for smart contract communication, some may use an alternative ABI. However, all ElementAPIs must use NeutronABI. 
+NeutronABI is an optional component for smart contract communication, some may use an alternative ABI.
+
+Example ABI for a token contract:
+
+ERC20.Transfer{ //note: internally a `.` is prefixed to each key name
+    value: u64,
+    to: address,
+    from: optional<address>
+    message: optional<ascii_string>
+}
+ERC20.Allowance{
+    max_value: u64,
+    to: address
+    expiration: block_time,
+    data: [u8]
+}
+
+And a more complex example:
+
+MyInterface.do_call{
+    some_data: [u8]
+    [MyArrayStruct]{
+        parameter1: u32
+    }
+    Optional<MyOptionalStruct>{
+        [some_array_of_bytes]: [u8]
+    }
+}
+
+An example of this decoded from a transaction otherwise without context, might look like the following:
+
+* `function call` -> `MyInterface.do_call`
+* `some_data` -> [0, 10, 20]
+* `MyArrayStruct[0].parameter1` -> 2942
+* `MyArrayStruct[1].parameter1` -> 593
+* `MyOptionalStruct.some_array_of_bytes[0]` -> [0, 1, 2, 3, 4]
+* `MyOptionalStruct.some_array_of_bytes(count)` -> 1
+
+Note that the ABI text above is not at all the final version. The final version is still TBD, but would likely use an existing data format such as JSON or TOML
+
 
 The ABI is simple, yet powerful by design with just enough complexity to faciliate ample opportunity for extension. The map concept that is native to Neutron is codeified into a standardized format for key names:
 
@@ -54,6 +93,8 @@ Type is one of the following values:
 * 73 -- big endian u512
 * 74 -- big endian u1024
 * 75 -- big endian u2048
+* 76 -- block time
+* 77 -- block height (alias for u32)
 * 128 - 195 -- Extension types (can be defined by community/users), treated as [u8] if not implemented
 * 196-227 -- One byte extension types (can be defined by community/users). Following byte is used for more type information
 * 228-243 -- Two byte extension types (can be defined by community/users). Following two bytes are used for more type information
