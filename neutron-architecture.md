@@ -17,8 +17,31 @@ The following components will be included within this spec:
 
 ## CoMap
 
-The CoMap is the central piece of communication for almost all things within Neutron. It is used for passing call data into smart contracts, for smart contracts to pass parameter data to Element APIs, and various other uses. It is expected to also be a central point of abuse for smart contracts, and so must be carefully designed to avoid exploits forming here.
+The CoMap is the central piece of communication for almost all things within Neutron. It is used for passing call data into smart contracts, for smart contracts to pass parameter data to Element APIs, and various other uses. It is expected to also be a central point of abuse for smart contracts, and so must be carefully designed to avoid exploits forming here. Each contract execution has access to three CoMap structures, titled Inputs, Results, and Outputs. The Inputs and Results CoMap is read-only. The Outputs CoMap is write-only. Is it possible to copy the entire inputs/results map into outputs, as well as to copy individual keys without involving smart contract code explicitly loading the key into memory and then storing the data into the outputs array.
 
+Both CoMaps are quite volatile in how they operate in order to minimize memory usage and the potential for abuse. Specifically, the following happens upon entering an Element/Contract:
+
+* The outputs CoMap from the caller is made accessible as the inputs CoMap to the callee
+* A new CoMap is made for the outputs CoMap for the callee
+* A new CoMap is made for the resutls CoMap for the callee
+
+When the Element/contract returns control to the caller, the following happens:
+
+* The outputs CoMap from the callee will overwrite the results CoMap for the caller
+* The outputs CoMap from the caller is cleared and made empty
+* The callee's inputs are destroyed (since they are aliased as the outputs of the caller)
+
+Notice that over the entire contract execution, the Inputs map remains accessible and preserved, the Outputs map becomes a method by which to both return data to the calling contract, as well as to communicate with Elements or sub-contracts, and finally the Results map allows accessing sub-call results without interfering with Inputs, nor keeping every map of each sub-call accessible. In some contract call flows, it may be necessary to copy some data from a map temporarily into memory to preserve it, but this shouldn't be a common case. Ideally, as little data copying needs to be done as possible, while also putting an upper bound on the number of maps which must be preserved during contract execution. 
+
+Note that for gas purposes, there are various pressure variables on the amount of CoMap data being tracked, thus there should be pressure to prevent using the CoMap as a generalized data store
+
+Functions:
+
+* push_output (key, type, data)
+* peek_input(key) -> data
+* peek_input_with_type(key) -> (type, data)
+* peek_result(key) -> data
+* peek_result_with_type(key) -> (type, data)
 
 ## ComStack
 

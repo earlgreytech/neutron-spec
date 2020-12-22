@@ -127,6 +127,8 @@ FunctionIDs can be used by the ABI Helper element for easier mapping that does t
 
 The NeutronABI is used for ElementAPI calls, but with the exclusion of a FunctionID being placed in the map. Instead a specific Element Function Number is used when doing the system_call operation, and with CoMap being used for all parameter data
 
+The type information is included in the ElementABI parameters data, but there is no validation and all 
+
 If the Element function number is 0xFFFF_FFFF, then the `.*fn` CoMap key is used to select the function (note: this may not be supported for all Elements)
 
 # Flat and Semi-flat ABI Encoding
