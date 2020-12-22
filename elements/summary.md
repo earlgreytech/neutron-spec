@@ -9,6 +9,8 @@ These are only used in these specifications and are not necessarily strict.
 * :pure -- Conveys that the function is purely computation and thus given the same input should give the same output at any point in the blockchain history. Can be used by all execution contexts (short of forks etc for adding new algorithms or bug fixes)
 * :static -- Conveys that the function will not modify or alter potentially upstream data dependencies, but also that this function's results may change through the current chain of execution. In other words, it may read execution-mutable state, but not modify it. This can not be used by pure execution contexts
 * :mutable -- Conveys that the function will modify data which may be relied upon in other places in the execution history. In other words, it may both read and write to execution-mutable state. This can not be used by pure nor static execution contexts. 
+* :comap -- Conveys that the comap must be used for this function
+* :comap_optional -- Conveys that additiona features are available by using the comap for this function
 
 Note that these modifiers are not included in the FunctionID
 
@@ -23,10 +25,6 @@ This function shall be used rather than speculative execution (ie, pushing input
 Calling any function_exists Element API function shall be a free function in terms of gas costs. C
 
 Calling function_exists on an element which is not supported will not return a 0 version, but rather give an error which will indicate the element is not supported. Usage of the API for this purpose to detect supported Elements shall also be gas-free. 
-
-All ABI parameters are listed here as normal function signatures like in Rust, but keep in mind that with CoMap there is not an explicit order for parameters. The order listed here will be used with the official Neutron Star Rust API. With other APIs there may be modifications to this order, or usage of structs for parameters, etc. When there are optional parameters, the Rust concept of `Option<T>` is used in the Neutron Star Rust API.
-
-The types are specified here for convenience, but are not included in the CoMap structure, with the exclusion of external contract calls
 
 Standard Tracts:
 

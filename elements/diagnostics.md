@@ -14,6 +14,7 @@ Standard Functions:
 * 2, log_warning(count: u32, inputs:...):pure
 * 3, log_info(count: u32, inputs:...):pure
 * 4, log_debug(count: u32, inputs:...):pure
+* 5, log_info_comap():comap, pure -- Will log all data in the caller's output comap as info messages in a key -> data format using attached types for decoding. The `.msg` key will be logged first as the context for the rest of the keys
 
 ## ABI Exception!
 

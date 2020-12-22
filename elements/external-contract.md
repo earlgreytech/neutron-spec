@@ -10,9 +10,9 @@ Provision: Recommended if underlying blockchain has the capability
 
 Standard Functions:
 
-* 1, call_contract(address: NeutronShortAddress, gas_limit: u64, inputs: ...):mutable -> (error_code:u32, outputs: ...)
-* 2, static_call_contract(address: NeutronShortAddress, gas_limit: u64, inputs: ...):static -> (error_code:u32, outputs: ...)
-* 3, pure_call_contract(address: NeutronShortAddress, gas_limit: u64, inputs: ...):pure -> (error_code:u32, outputs: ...)
+* 1, call_contract(address: NeutronShortAddress, gas_limit: u64, inputs: ...):comap, mutable -> (error_code:u32, outputs: ...)
+* 2, static_call_contract(address: NeutronShortAddress, gas_limit: u64, inputs: ...):comap, static -> (error_code:u32, outputs: ...)
+* 3, pure_call_contract(address: NeutronShortAddress, gas_limit: u64, inputs: ...):comap, pure -> (error_code:u32, outputs: ...)
 * 4, get_self_address_of_deployer():pure -> address: NeutronShortAddress
 * 5, get_address_of_deployer(address: NeutronShortAddress):static -> address: NeutronShortAddress
 * 6, get_self_initial_deploy_hash():pure -> hash: u256
@@ -28,7 +28,7 @@ Standard Functions:
 * 
 Optional Functions:
 
-* 16, call_contract_with_value(address: NeutronShortAddress, gas_limit: u64, value: u64, inputs: ...):mutable -> (error_code:u32, outputs: ...)
+* 16, call_contract_with_value(address: NeutronShortAddress, gas_limit: u64, value: u64, inputs: ...):comap, mutable -> (error_code:u32, outputs: ...)
 
 ## Details
 
