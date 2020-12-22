@@ -26,7 +26,7 @@ The registers which can be used for returning data from a system call are:
 * r0
 * r1 (64 bit results only)
 
-If more data is needed, or if dynamic length data is used, then the ComStack should be used. 
+If more data is needed, or if dynamic length data is used, then the CoStack should be used. 
 
 For reference, given an interrupt of the format `do_stuff(foo, bar, baz, bim, fam) -> zam:u64` the register usage would be as so for input:
 
@@ -34,7 +34,7 @@ For reference, given an interrupt of the format `do_stuff(foo, bar, baz, bim, fa
 * r1 = bar
 * r2 = baz
 * r3 = bim
-* first item popped from comstack = fam
+* first item popped from costack = fam
 
 And as so for output:
 

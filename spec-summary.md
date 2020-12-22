@@ -6,10 +6,12 @@ Diagram Link: https://miro.com/app/board/o9J_kjJIlZw=/
 
 # Terms
 
-* ComStack -- (Previously known as "SCCS") The communication stack which is used for inter-contract communication as well as used as an integral data stack which is used to pass data to and from smart contracts, to and from Neutron infrastructure pieces
+* CoStack -- (Previously known as "SCCS") The communication stacks which is used as a data stack which is used to pass data to and from Neutron infrastructure pieces
+* CoMap -- The communication maps which are used for communicating with smart contracts
 * VM -- Virtual Machine, in this case, the virtual machine which executes smart contract code
 * Element -- (Previously "feature sets"), an API specifically exposed to smart contracts via the ElementABI standard. Examples include "BlockchainInfo Element", "UTXO Element", "Crypto Element", etc. Some Elements defined here are to be treated as a standard, meaning that if a blockchain integrating Neutron exposes the element, it must follow the standard laid down here. 
-* ABI -- Application Binary Interface, used here specifically to describe a standard method of data layout within the ComStack for communication with other smart contracts and Elements
+* NeutronABI -- Application Binary Interface, used here specifically to describe a standard method of data layout within the CoMap for communication with other smart contracts
+* ElementABI -- Application Binary Interface for communicating with Neutron Elements via the CoStack
 * NeutronStar -- The API and standard set of libraries by which smart contract developers will write smart contracts which communicate with Neutron. Note that NeutronStar's user-visible design is mostly not covered in this document.
 
 # Overall Goals

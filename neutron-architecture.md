@@ -3,12 +3,15 @@
 
 The following components will be included within this spec:
 
-* ComStack -- a communication stack for smart contracts talking to Neutron and vice versa, an integral piece of all ABI specifications
-* Neutron Hypervisor -- a hypervisor is what mediates between the smart contract executing within a VM and the Neutron Call System and ComStack.
-* Neutron x86 Hypervisor -- The specific working mechanisms of the x86 VM hypervisor will be included
-* x86 VM -- The specifications for the x86 VM itself will be included here for posterity, even though it may not exactly belong here. 
+* CoMap -- a set of communication maps for smart contracts talking primarily to external smart contracts and vice versa, an integral piece of NeutronABI specifications
+* CoStack -- a set of communication stacks for smart contracts talking to Neutron Elements and vice versa, an integral piece of ElementABI specifications
+* CoData -- The CoMap and CoStack data structures, named as a whole together.
+* Neutron Hypervisor -- a hypervisor is what mediates between the smart contract executing within a VM and the Neutron Call System and CoData.
+* Neutron ARM Hypervisor -- The specific working mechanisms of the ARM VM hypervisor will be included
+* NARM VM -- The specifications for the ARM VM itself will be included here for posterity, even though it may not exactly belong here. 
 * Neutron Call System -- The core interface by which all other pieces of Neutron can communicate with each other
-* Neutron ABI -- The ABI used for communicating with Elements as well as other smart contracts. All Neutron Element APIs must use the Neutron ABI. Smart contracts shall use it, but it is expected that improved and alternative smart contract ABIs may arise for various needs. Using an alternative ABI would require some tooling changes, but does not require any consensus-critical changes within Neutron (ie, a hard-fork) 
+* ElementABI -- An ABI used for communicating with Neutron Elements. It primarily uses the CoStack data structures for communication. All Neutron Element APIs must use the Element ABI.
+* Neutron ABI -- The ABI used for communicating with smart contracts. Smart contracts are not forced to use it, but it is expected that the NeutronABI will be extended in backwards compatible ways, rather than a complete break from the groundwork laid down here. Using an alternative ABI would require some tooling changes, but does not require any consensus-critical changes within Neutron (ie, a hard-fork) 
 * Selected Neutron Element API Standards (NEAPs) -- Neutron will include standards for various Element concepts. These include things like a standard interface for UTXO based blockchains, wallet management, cryptography standards, etc. The list described here will be non-exhaustive
 * Qtum Element APIs (QEAs) -- As part of this spec, some Qtum-specific Element APIs will also be described. These are expected to expose the various unique features of Qtum which would likely not apply to other blockchains
 * NeutronDB -- The consensus-critical database for smart contract state to be implemented along with Neutron. Note that Neutron could run without any database, or with an alternative one. 
@@ -38,52 +41,60 @@ Note that for gas purposes, there are various pressure variables on the amount o
 Functions:
 
 * push_output (key, type, data)
+* push_output_with_type(key, data_with_type)
 * peek_input(key) -> data
 * peek_input_with_type(key) -> (type, data)
 * peek_result(key) -> data
 * peek_result_with_type(key) -> (type, data)
+* copy_input_to_output(key)
+* copy_result_to_output(key)
+* count_map_swaps() -> count -- This can be used for smart data structures which can be made easily aware of invalidations to output data. This value is incremented every time the outputs map is invalidated
 
-## ComStack
+Note: most hypervisors are expected to include max length, beginning index, etc parameters to allow for easier subset access to each piece of data within the comaps
 
-The ComStack is the central piece of communication for almost all things within Neutron. It is used for passing call data into smart contracts, for smart contracts to pass parameter data to Element APIs, and various other uses. It is expected to also be a central point of abuse for smart contracts, and so must be carefully designed to avoid exploits forming here.
-In addition to being used a simple data stack for communication purposes, ComStack also implements a context tracking stack. This is not something directly accessible by smart contracts. It will track the current smart contract ID being executed, gas limit, and other information about the current execution. Note that it is possible for many different contexts to exist within a single contract executing Qtum transaction. 
+## CoStack
 
-Overview of all potential use cases:
+The CoStack is used for passing data in and out of ElementAPI calls. It is used rather than CoMap to avoid overhead with key names and generally unneeded complexity. There are two CoStacks available for smart contracts, read-only inputs, and write-only outputs. Smart contracts can not receive data from external contracts via the inputs stack, this can only be done by CoMaps. CoStack is only used for ElementAPI communication. Some ElementAPI functions may optionally, or by a requirement of the element, use the CoMap concept as well. 
 
-* Passing call data into a smart contract either from a Qtum transaction, or from an external smart contract call
-* Passing parameter data to Element APIs and receiving result data from Element APIs
-* As an auxiliary storage space for some types of temporary data within smart contracts. 
-* As a method of loading smart contract code and data from a Storage Element API into a Neutron Hypervisor
-* As a tool of communication between Qtum and the various integration Element APIs
-* As a tool of communication between different Element APIs
-* Communicating with all parts of Neutron the current smart contract the gas limit it has, total gas costs, smart contract address, and other information.
-* Give the wide variety of use cases, the ComStack must have strictly defined limitations and gas costs. There may be gas cost opt-out methods implemented for the ComStack for all internal uses. This is allowed to prevent the ComStack from being avoided for internal communications when it is the ideal tool for it. 
+Functions:
 
-Methods of ComStack: (note, due to hypervisor and language limitations etc, this will have different actual parameters, names, etc)
+* push_stack_output(data)
+* pop_stack_input(data)
+* peek_stack_input(data)
+* clear_stacks() -- clears both input and output stacks. Might later be rewarded with a gas refund for doing this
+* pop_stack_into_output_comap()
+* pop_stack_into_output_stack()
 
-* push data (data) -> void -- adds a piece of data to the top of the ComStack
-* pop data () -> data -- removes the top most piece of data from the ComStack and returns it
-* peek data (index) -> data -- returns a piece of data from the stack without destroying the item. In this, the top most item is 0 and the one below that is 1, etc. This allows getting various pieces of information from the ComStack without needing to do costly reordering or destruction/recreation operations
-* peek data size (index) -> size -- returns the size of the data, cheaper than normal peeking
-* drop data() -> void -- This will destroy the top most item on the stack without returning the data. This is cheaper than using pop due to lack of needing to copy any memory
-* dup stack(index) -> void -- This is equivalent to push(peek(index)) but is cheaper due to doing the memory copying within the ComStack itself
-* item count () -> count -- This will return the total number of items in the ComStack
-* memory size() -> size -- This will return the total number of bytes contained within the ComStack
-* push context(context) -> void -- this will push a new context onto the Context Tracking Stack
-* peek context(index) -> context -- this will get the context at the specified index in the stack
-* pop context() -> context -- this will destroy the current context and return it's content
-* context count () -> count -- this will return the total number of contexts currently held
+## CoStack and CoMap meta info
 
-Limit Constants
+CoStack and CoMap data structures should be handled by the same overall interface/structure, NeutronManager
 
-* COMSTACK_MAX_ELEMENT_SIZE -- proposed, 64Kb. This is the maximum size of a single stack item on the comstack. This limit has broad effects on ABI design, hypervisor implementation, and internal communications. Thus it would be extremely difficult to change after the fact.
-* COMSTACK_MAX_TOTAL_MEMORY -- proposed, 2Mb. This is the maximum size of all elements on the stack put together, excluding context stack info. This determines the overall maximum amount of memory that can be consumed by the ComStack. This would be hard coded into various pieces of infrastructure, and so reducing it after the fact will be extremely difficult. However, it can easily be made larger with minimal code changes.
-* COMSTACK_MAX_ELEMENT_COUNT -- proposed, 256. This is the maximum number of elements that can be held on the stack. As with total memory, this is hard to make smaller after being set, but easy to make larger
-* CONTEXT_STACK_MAX_COUNT -- proposed, 128. This is the total number of different contexts which can be held within the comstack. It is expected that gas costs will prevent exceeding the actual count here, as each context added equates to a new VM instance and new call operation.
+It shall be possible to get some info about the CoStack and CoMap structures
+
+* remaining_memory() -> size
+* remaining_stack_items() -> count
+* reentrancy_count() -> count -- counts the number of times the current smart contract has been called within the current call stack (1 = only once)
+
+Along with contract accessible data, there is also hidden various functions which should not be exposed to contracts directly:
+
+* push_context(context) -> void -- this will push a new context onto the Context Tracking Stack
+* peek_context(index) -> context -- this will get the context at the specified index in the stack
+* pop_context() -> context -- this will destroy the current context and return it's content
+* context_count() -> count -- this will return the total number of contexts currently held
+* comap_released() -> bool -- (ElementAPI use only) indicates if the caller has released access to the comaps
+
+Each context is an item in the call stack and represents an execution of a smart contract.
+
+Constants used:
+
+* CODATA_MAX_ELEMENT_SIZE -- proposed, 64Kb. This is the maximum size of a single stack item on the CoData. This limit has broad effects on ABI design, hypervisor implementation, and internal communications. Thus it would be extremely difficult to change after the fact.
+* CODATA_MAX_TOTAL_MEMORY -- proposed, 2Mb. This is the maximum size of all elements on the stack put together, excluding context stack info. This determines the overall maximum amount of memory that can be consumed by the CoData. This would be hard coded into various pieces of infrastructure, and so reducing it after the fact will be extremely difficult. However, it can easily be made larger with minimal code changes.
+* CODATA_MAX_ELEMENT_COUNT -- proposed, 256. This is the maximum number of elements that can be held on the stack. As with total memory, this is hard to make smaller after being set, but easy to make larger
+* CONTEXT_STACK_MAX_COUNT -- proposed, 128. This is the total number of different contexts which can be held. It is expected that gas costs will prevent exceeding the actual count here, as each context added equates to a new VM instance and new call operation.
 
 ## Neutron Call System
 
-This is more informally called the "Neutron Core". It is what works together with ComStack to facilitate all intercommunication between smart contracts and different ElementAPIs and thus the final underlying blockchain. 
+This is more informally called the "Neutron Core". It is what works together with CoStack to facilitate all intercommunication between smart contracts and different ElementAPIs and thus the final underlying blockchain. 
 
 The Call System can be called from other Elements or from smart contract code. Calling it from an external interface uses a simple interface consisting of 2 inputs (arguments) and 2 outputs (results).
 
@@ -95,7 +106,7 @@ Outputs:
 * Result, u32 -- The result code. In Rust implementations, errors are handled so that it appears to give 2 outputs, one with a non-error result and one with an error result
 * Non-recoverable, bool -- If this is set, then an error has occurred which means that the entire smart contract execution (including any further up contexts) must immediately terminate, reverting all state. This can happen as a result of reading out of state rent, or encountering an "impossible" error within some Neutron Infrastructure.
 
-From this, the interface would appear quite limited, however, additional arguments, results, and data can be passed using the ComStack, which are shared between both the caller and callee. 
+From this, the interface would appear quite limited, however, additional arguments, results, and data can be passed using the CoStack, which are shared between both the caller and callee. 
 
 There is a standard for ElementIDs and FunctionIDs. Specifically, if the top bit is set on either an ElementID or FunctionID (ie, greater than 0x8000_0000) then the Element or Function is considered to be a non-standard one. This would mean that these elements/functions are not expected to be shared or implemented in any other blockchain. In addition the FunctionID of 0 is reserved. This is used to test if a particular ElementID is available. The element should return a result of 0 or greater if it exists. It should otherwise return an element does not exist error code. 
 
@@ -125,7 +136,7 @@ The specific responsibilities of the Call System includes:
 
 A Neutron Hypervisor is a component which exposes an interface for Neutron to a VM. Because each VM could be radically different, there is no one size fits all approach that is appropriate. However, the specific key pieces that should be exposed in a hypervisor includes:
 
-* ComStack operations, including placing data on the stack and getting data off of the stack
+* CoData operations, including placing data on the stack and getting data off of the stack
 * Current context information, including gas used, gas limits, self-address information, etc
 * An interface to call Neutron Element APIs
 

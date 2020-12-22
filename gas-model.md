@@ -34,15 +34,15 @@ Standard VM operation costs:
 * VM_READABLE_MEMORY_ADDED -- charge per byte of VM memory added which can potentially be optimized away due to being read-only
 * VM_MEMORY_PRESSURE -- Neutron supplied function. Applies gas pressure to prevent too much allocation
 * VM_MEMORY_PRESSURE_THRESHOLD -- Neutron supplied function. Specifies when pressure should start to be applied to an allocation
-* COMSTACK_PUSH_BASE_COST -- base cost per push. Note this is not used by VMs directly, but rather only by hypervisors
-* COMSTACK_PRESSURE_THRESHOLD -- determination of when the comstack should begin exerting "pressure" costs
-* COMSTACK_PRESSURE -- amount of gas pressure to exert (could potentially represent a curve parameter etc
+* CODATA_PUSH_BASE_COST -- base cost per push. Note this is not used by VMs directly, but rather only by hypervisors
+* CODATA_PRESSURE_THRESHOLD -- determination of when the costack and/or comap should begin exerting "pressure" costs
+* CODATA_PRESSURE -- amount of gas pressure to exert (could potentially represent a curve parameter etc
 
 Additional costs per VM could be for things like complex Mod R/M decoding in x86, or using conditional execution in ARM.
 
 ## Communication of Gas
 
-Element gas is controlled and updated through the holder of the Comstack
+Element gas is controlled and updated through the holder of the Codata
 
 
 

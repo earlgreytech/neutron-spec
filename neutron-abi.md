@@ -125,11 +125,11 @@ FunctionIDs can be used by the ABI Helper element for easier mapping that does t
 
 ## ElementAPI Variant 
 
-The NeutronABI is used for ElementAPI calls, but with the exclusion of a FunctionID being placed in the map. Instead a specific Element Function Number is used when doing the system_call operation, and with CoMap being used for all parameter data
+To simplify ElementAPI, there is a simplified read-only "input" and write-only "output" stack. Similar to CoMap, output of the caller is aliased to the input of the callee, while upon returning, the output of the callee is moved to the input of the caller while the outputs of the caller is cleared. Unlike CoMap, stack manipulation tools available are more limited by design. The CoMap can also be used, but must be explicitly specificied in the Element API call. For instance, there might be `element_call` and `element_call_with_comap`. Each ABI function should specify if the comap version is required. 
 
-The type information is included in the ElementABI parameters data, but there is no validation and all 
+If the comap call is used, then the results comap will be cleared and made to match the outputs of the Element function, and the outputs comap will be cleared. Even if the Element function does not use the comap, this behavior will still be used when the comap call is used. Some functions may have extra features available by using comap, or include extensions within comap data. Certain functions may require comap data.
 
-If the Element function number is 0xFFFF_FFFF, then the `.*fn` CoMap key is used to select the function (note: this may not be supported for all Elements)
+If a comap ElementAPI is used, then it should include appropriate type info, preferably a single byte type data.
 
 # Flat and Semi-flat ABI Encoding
 
