@@ -49,60 +49,60 @@ The name format is as follows:
 
     .[[@/~][number]namespace].[@/~][number]keyname -> [type]data
 
-Type is one of the following values:
+## Type Format
 
-* 0 -- u8
-* 1 -- i8
-* 2 -- u16
-* 3 -- i16
-* 4 -- u32
-* 5 -- i32
-* 6 -- u64
-* 7 -- i64
-* 8 -- u128
-* 9 -- i128
-* 10 -- u256
-* 11 -- i256
-* 12 -- u512
-* 13 -- i512
-* 14 -- u1024
-* 15 -- i1024
-* 16-31 -- reserved
-* 32 -- [u8]
-* 33 -- [i8]
-* 34 -- [u16]
-* 35 -- [i16]
-* 36 -- [u32]
-* 37 -- [i32]
-* 38 -- [u64]
-* 39 -- [i64]
-* 40 -- [u128]
-* 41 -- [i128]
-* 42 -- [u256]
-* 43 -- [i256]
-* 44-63 reserved
-* 64 -- NeutronAddress
-* 65 -- NeutronLongAddress
-* 66 -- NeutronVersion
-* 67 -- ASCII string
-* 68 -- UTF-8 string
-* 69 -- Function ID 
-* 70 -- big endian u256 (for compatibility with ETH displaying of u256 values)
-* 71 -- big endian u160
-* 72 -- Bitcoin style address (will display as base58)
-* 73 -- big endian u512
-* 74 -- big endian u1024
-* 75 -- big endian u2048
-* 76 -- block time
-* 77 -- block height (alias for u32)
-* 128 - 195 -- Extension types (can be defined by community/users), treated as [u8] if not implemented
-* 196-227 -- One byte extension types (can be defined by community/users). Following byte is used for more type information
-* 228-243 -- Two byte extension types (can be defined by community/users). Following two bytes are used for more type information
-* 244-252 -- Four byte extension types (can be defined by community/userS). Following four bytes are used for more type information
-* 253 -- Reserved
-* 254 -- Variable length extension. Followed by a single byte length field, and then the following bytes up to that length encodes the full type information.
-* 255 -- Unknown/Generic
+The top 2 bits of the first byte of data determine length of type info:
+* 00 -- 6 bit type info (64 possibilities)
+* 01 -- 14 bit type info (6 + 8)
+* 10 -- 30 bit type info (6 + 8 + 8 + 8)
+* 11 -- variable length type info (6 bit length, with 1 added and multiplied by 2 to between 1 and 128 bytes of type info)
 
+
+Standard for integer types:
+
+* 6th bit, must be 0
+* 5th bit, 1 if display in hex for unsigned, otherwise if one and signed use alternate list
+* 4th bit, treat as array
+* 3rd, 2nd, and 1st bit. Type list below
+
+Type list:
+1. u8
+2. i8
+3. u16
+4. i16
+5. u32
+6. i32
+7. u64
+8. i64
+
+Alternate list:
+
+1. (i8) u160, big endian, hex only
+2. (i16) u256, big endian, hex only
+3. (i32) u512, big endian, hex only
+4. (i64) u1024, big endian hex only
+
+Other Neutron Types
+
+* 6th bit, must be 1
+* 5th bit, must be 1 (when 0 is used for unreserved extension types)
+
+* NeutronAddress
+* NeutronLongAddress
+* ASCII string
+* UTF-8 string
+* Bitcoin style address (base58)
+* Function ID
+* Block time (u64 timestamp)
+* Block height
+* Block hash
+* 10-15 reserved
+
+For type info with more than 2 or 4 bytes, (top bits == 01 or 10), the top bit must be 0 for all custom extensions. When the top bit is 1, it is reserved for Neutron use cases. There is no reserved type info for variable length type info (top bits = 11)
+
+All integer types unless indicated are displayed as little endian numbers
+
+## Namespaces
 
 The namespace portion of the key is `.` for the "root" namespace. The `..` namespace is reserved for system use. Such keys can not be written by smart contracts. Otherwise, every namespace must begin and end with `.`. The namespace concept has no fixed use case, but has significant potential to improve the extensibility of ABIs. Examples:
 
@@ -113,11 +113,10 @@ The namespace portion of the key is `.` for the "root" namespace. The `..` names
 
 With the CoMap concept combined with this ABI, it is trivial to not only send multiple pieces of data as parameters into calling contracts, but to also return multiple pieces of data as results from the called contract. The same ABI rules apply. 
 
-All integer types unless indicated are displayed as little endian numbers
 
 ## Key encoding
 
-All keys are treated strictly as ASCII strings, and displayed accordingly in UI etc. The "z/Z" prefix is used to indicate a key name forms an array. In order to prevent the complexities of BCD from being required, this is the one exception to ASCII key namees.
+All keys are treated strictly as ASCII strings, and displayed accordingly in UI etc. The "@/~" prefix is used to indicate a key name forms an array. In order to prevent the complexities of BCD from being required, this is the one exception to ASCII key namees.
 
 Every key part is prefixed by `.`, if the next character is either `@` or `~` then it indicates that it forms an array. The character after the `@` or `~` is treated as either an unsigned byte, or unsigned word, respectively, to indicate an array element.
 
