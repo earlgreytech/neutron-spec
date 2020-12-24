@@ -48,22 +48,33 @@ Note all operations here unless specified are classified as "pure". "variable" m
 Misc:
 * SVC 0x00: nop -- Always considered a no-operation with no modifications to CPU state
 
-ComStack operations:
+CoStack operations: --note: CoStack functions are limited to 4 u32 register parameters
 
-* SVC 0x10: push_comstack (buffer, size)
-* SVC 0x11: pop_comstack (buffer, max_size) -> actual_size: u32 -- note: if buffer and max_size is 0, then the item will be popped without copying the item to memory and only the actual_size will be returned
-* SVC 0x12: peek_comstack (buffer, max_size, index) -> actual_size: u32 -- note: if buffer and max_size is 0, then this function can be used solely to read the length of the item. 
-* SVC 0x14: dup_comstack() -- will duplicate the top item on the stack
-* SVC 0x15: comstack_item_count() -> size:u32 -- will get the number of items on the stack
-* SVC 0x16: comstack_memory_size() -> size:u32 -- will get the total size of all items on the stack
-* SVC 0x17: comstack_memory_remaining() -> size:u32 -- will get the remaining total size that is allowed to be used within this execution
-* SVC 0x18: comstack_item_limit_remaining() -> size:u32 -- will get the total remaining number of items that can be pushed onto the stack
-* SVC 0x19: comstack_clear() -- Will clear the stack completely, without giving any information about what was held on the stack
-* SVC 0x1A: peek_partial_comstack(buffer, begin, max_size) -> actual_amount_read: u32 -- will read only a partial amount of data from an SCCS item in the middle of the item's data (starting at 'begin')
+* SVC 0x10: push_costack (buffer, size)
+* SVC 0x11: pop_costack (buffer, max_size) -> actual_size: u32 -- note: if buffer and max_size is 0, then the item will be popped without copying the item to memory and only the actual_size will be returned
+* SVC 0x12: peek_costack (buffer, max_size, index) -> actual_size: u32 -- note: if buffer and max_size is 0, then this function can be used solely to read the length of the item. 
+* SVC 0x13: dup_costack() -- will duplicate the top item on the stack
+* SVC 0x14: costack_clear() -- Will clear the stack completely, without giving any information about what was held on the stack
+* SVC 0x15: peek_partial_costack(buffer, begin, max_size) -> actual_amount_read: u32 -- will read only a partial amount of data from an SCCS item in the middle of the item's data (starting at 'begin')
 
 Call System Functions:
 
 * SVC 0x20: system_call(feature, function):variable -> error:u32 -- will call into the NeutronCallSystem
+* SVC 0x21: system_call_with_comap(feature, function):variable -> error:u32 -- will call into the NeutronCallSystem
+
+CoMap operations:
+
+* SVC 0x30: push_comap(key: [u8], abi_data: [u8], value: [u8])
+* SVC 0x31: push_raw_comap(key: [u8], raw_value: [u8])
+* SVC 0x32: peek_comap(key: [u8], begin: u32, max_length: u32) -> (abi_data: [u8], value: [u8]) --note max_length of 0 indicates no maximum length
+* SVC 0x33: peek_raw_comap(key: [u8], begin: u32, max_length: u32) -> (raw_value: [u8])
+* SVC 0x34: peek_result_comap(key: [u8], begin: u32, max_length: u32) -> (abi_data: [u8], value: [u8])
+* SVC 0x35: peek_raw_result_comap(key: [u8], begin: u32, max_length: u32) -> (raw_value: [u8])
+* SVC 0x36: clear_comap_key(key: [u8])
+* SVC 0x37: clear_comap_outputs()
+* SVC 0x38: clear_comap_inputs()
+* SVC 0x39: clear_comap_results()
+--todo: map copying operations
 
 Hypervisor Functions:
 
@@ -71,25 +82,21 @@ Hypervisor Functions:
 
 Context Functions:
 
-* SVC 0x90: gas_limit() -> limit:u64 -- Will get the total amount of gas available for the current execution
+* SVC 0x90: gas_remaining() -> limit:u64 -- Will get the total amount of gas available for the current execution
 * SVC 0x91: self_address() -- result on stack as NeutronShortAddress -- Will return the current address for the execution. For a "one-time" execution, this will return a null address
 * SVC 0x92: origin() -- result on stack as NeutronShortAddress -- Will return the original address which caused the current chain of executions
 * SVC 0x93: origin_long() -- result on stack as NeutronLongAddress
 * SVC 0x94: sender() -- result on stack as NeutronShortAddress -- Will return the address which caused the current execution (and not the entire chain)
 * SVC 0x95: sender_long() -- result on stack as NeutronLongAddress
-* SVC 0x96: value_sent() -> value:u64 -- The total amount of Qtum sent with the execution
-* SVC 0x97: nest_level() -> level:u32 -- The number of times the current contract address is on the ContextStack. For example, the nest_level of A in the case of `A -> B -> C -> A -> D -> A` will be 3.
-* SVC 0x98: gas_remaining() -> gas:u64 -- The total amount of gas remaining for the current execution
-* SVC 0x99: execution_type() -> type:u32 -- The type of the current execution (see built-in types)
-* SVC 0x9A: execution_permissions() -> permissions:u32 -- The current permissions of the execution (see built-in types)
+* SVC 0x96: execution_type() -> type:u32 -- The type of the current execution (see built-in types)
+* SVC 0x97: execution_permissions() -> permissions:u32 -- The current permissions of the execution (see built-in types)
 
 Contract Management Functions:
 
-* SVC 0xA0: upgrade_code_section(id: u8, bytecode: [u8]):mutable
-* SVC 0xA1: upgrade_data_section(id: u8, data: [u8]):mutable
-* SVC 0xA2: upgrade_abi_format(new_format: u8):mutable
-* SVC 0xA3: upgrade_abi_type(new_type: u64):mutable -- new_type is pushed to the ComStack
-* SVC 0xA4: get_data_section(id: u8) -> data: [u8] --there is no code counter type provided because it can be read directly from memory. Data can as well, but may have been modified during execution
+* SVC 0xA0: upgrade_code_section(id: u8, bytecode: [u8], position: u32):mutable
+* SVC 0xA1: upgrade_data_section(id: u8, data: [u8], position: u32):mutable
+* SVC 0xA2: upgrades_allowed(): static -> bool
+* SVC 0xA4: get_data_section(id: u8, begin, max_size) -> data: [u8] --there is no code counter type provided because it can be read directly from memory. Data can as well, but may have been modified during execution
 
 
 System Functions:

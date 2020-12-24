@@ -56,6 +56,8 @@ Note: most hypervisors are expected to include max length, beginning index, etc 
 
 The CoStack is used for passing data in and out of ElementAPI calls. It is used rather than CoMap to avoid overhead with key names and generally unneeded complexity. There are two CoStacks available for smart contracts, read-only inputs, and write-only outputs. Smart contracts can not receive data from external contracts via the inputs stack, this can only be done by CoMaps. CoStack is only used for ElementAPI communication. Some ElementAPI functions may optionally, or by a requirement of the element, use the CoMap concept as well. 
 
+Unlike CoMaps, there is only one instance of the two CoStacks. In other words, CoStack data is not preserved across external contract calls. The input stack will contain only the result of the external contract call and the output stack will be cleared.
+
 Functions:
 
 * push_stack_output(data)
