@@ -184,6 +184,15 @@ The format of such data is as so:
 
 This flat data will be decoded by Neutron and put into the CoMap structure
 
+## Smart Contract Bytecode in ABI Data
+
+The following keys should be used by all smart contract VMs
+
+* `!.v` -> NeutronVersion
+* `!.c` -> Primary code section
+* `!.d` -> Primary mutable data section
+
+Additional bytecode keys can be used, but are VM defined
 
 ## Smart Contract Creation
 
@@ -197,7 +206,6 @@ The following items should be contained in the CoMap:
 In the case of ARM contracts:
 
 * `!.v` -> NeutronVersion
-* `!.t` -> ContractType
 * `!.c` -> primary code section
 * `!.d` -> primary data section
 * `!.#extra_code` -> Extra code section count
