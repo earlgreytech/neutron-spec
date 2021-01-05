@@ -1,4 +1,4 @@
-# Global Storage Element API
+# Global State Element API
 
 This element provides a basic method of accessing a global storage mechanism for persistent data across smart contract executions
 
