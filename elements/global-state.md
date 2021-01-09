@@ -17,7 +17,7 @@ Mandatory Token Functions:
 
 Note: if there is no support for any type of tokens in the underlying platform, these should always return 0 
 
-* X, get_token_balance(token_owner: NeutronShortAddress, id: u32, address: NeutronShortAddress):mutable -> value: u64 --Recommended to allow any address to be checked, but acceptable for only self_address to be supported
+* X, get_token_balance(token_owner: NeutronShortAddress, id: u32, address: NeutronShortAddress):mutable -> value: u64 --Recommended to allow any address to be checked, but acceptable for only self_address to be supported, or for only smart contract version addresses to be supported
 * X, claim_transfer(token_owner: NeutronAddress, id: u64, to: NeutronAddress) -> value: u64
 
 Recommended Standard Functions:
