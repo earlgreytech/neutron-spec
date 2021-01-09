@@ -26,7 +26,6 @@ For example, given a C-style format string like "Hello world the result of X is 
 * "100" -- %i (must be passed as an integer converted to a string)
 * " and Y is "
 * "foobar" -- %s
-* 4 -- the count of diagnostic messages
 
 Without this break in ABI standards, it would be a requirement that to implement a "printf" or "println!" style function, it would require storing each part of the diagnostic message until receiving the last message, then finally pushing each part in reverse order. This is very troublesome for such an essential function for development as allocation support is not necessarily guaranteed in each smart contract environment, not to mention the memory cost could be needlessly expensive. So, the alternative presented here is to push items to the stack as they come up and then for the Diagnostic Element API to reverse the stack internally within native code. 
 
