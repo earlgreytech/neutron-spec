@@ -152,6 +152,7 @@ There is no searching across keys available in the CoMap concept, so there shoul
     * `
     * ?
 * It is not always necessary to include a `#` count input for an array. If the array is contiguous with no missing elements, then it can simply be iterated over starting from 0, and will assume that the first missing item found indicates the end of the array.
+* A key prefix of `0` (0 the byte, or the NULL character) is explicitly disallowed to be observed or modified directly, such an action is a recoverable error. This is reserved for internal communications including token transfers
 
 ## FunctionID
 
@@ -193,6 +194,8 @@ The following keys should be used by all smart contract VMs
 * `!.d` -> Primary mutable data section
 
 Additional bytecode keys can be used, but are VM defined
+
+
 
 ## Smart Contract Creation
 
@@ -249,3 +252,13 @@ Examples:
     do_something:static,payable
 
 Note that modifiers are not used when computing function IDs and thus are only for the sake of ABI code generation and programmer reference.
+
+# Token Balance Transfers
+
+Token balance transfers are not exactly allowed within the actual ABI, but the comap mechanism is used for this, thus it makes sense to mention here.
+
+The key-value format used is the following:
+
+`0:u8 . token_owner:NeutronAddress . id:u64` -> `value:u64`
+
+
