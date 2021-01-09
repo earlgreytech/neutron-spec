@@ -79,6 +79,8 @@ This is a simple solution, but introduces several inefficiencies:
 * Each state key must still be tracked, meaning there is still an unbounded growing size, especially given that the state keys can potentially be large
 * This is very wasteful in the case of small pieces of state. For instance, if you have a key named "enabled" with a boolean state, then it actually costs more disk space to track the last block height than the actual data. Given previous ways that Ethereum contract state tends to be structured, small pieces of state is expected to be a fairly common case. 
 
+Note that in this solution the Delta proofs will need to be "condensed" and represent the final state of the database at the end of the block, and not contain modifications which happen before a final modification
+
 ## Reject Set solution
 
 In this method, some minor consensus proof modification would be necessary. The basic workflow:
@@ -112,7 +114,7 @@ Proposed State Modification Delta Structure:
 * data hash
 * tracking ID
 
-
+One problem with this proposal is that in the case of a key never being set, there is no way to "know" the reject set ID. In other words, it's not possible as it stands to actually set a key for the first time. So, this is potentially non-viable as it stands. In addition, with more thought on this design, it seems almost essential to have a `key_exists` function, especially for token balance modifications to be ergonomic for development. In short, this proposal has potential, but the naive solution will be used for the time being. 
 
 
 
