@@ -48,13 +48,11 @@ Functions:
 * peek_result_with_type(key) -> (type, data)
 * copy_input_to_output(key)
 * copy_result_to_output(key)
-* count_map_swaps() -> count -- This can be used for smart data structures which can be made easily aware of invalidations to output data. This value is incremented every time the outputs map is invalidated
+* TBD count_map_swaps() -> count -- This can be used for smart data structures which can be made easily aware of invalidations to output data. This value is incremented every time the outputs map is invalidated
+* get_incoming_transfer_value(address: NeutronAddress, id: u64) -> value: u64
+* get_incoming_transfer_info(index: u32) -> (address: NeutronAddress, id: u64) -- note, both output parameters use the costack
 
 Note: most hypervisors are expected to include max length, beginning index, etc parameters to allow for easier subset access to each piece of data within the comaps
-
-### CoMap Token Balance Transfers
-
-The CoMap can be used for transferring tokens.
 
 ## CoStack
 

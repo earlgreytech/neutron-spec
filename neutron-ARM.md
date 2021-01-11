@@ -50,12 +50,27 @@ Misc:
 
 CoStack operations: --note: CoStack functions are limited to 4 u32 register parameters
 
-* SVC 0x10: push_costack (buffer, size)
-* SVC 0x11: pop_costack (buffer, max_size) -> actual_size: u32 -- note: if buffer and max_size is 0, then the item will be popped without copying the item to memory and only the actual_size will be returned
-* SVC 0x12: peek_costack (buffer, max_size, index) -> actual_size: u32 -- note: if buffer and max_size is 0, then this function can be used solely to read the length of the item. 
+* SVC 0x10: push_costack (buffer: pointer, size: u32)
+* SVC 0x11: pop_costack (buffer: pointer, max_size: u32) -> actual_size: u32 -- note: if buffer and max_size is 0, then the item will be popped without copying the item to memory and only the actual_size will be returned
+* SVC 0x12: peek_costack (buffer: pointer, max_size: u32, index: u32) -> actual_size: u32 -- note: if buffer and max_size is 0, then this function can be used solely to read the length of the item. 
 * SVC 0x13: dup_costack() -- will duplicate the top item on the stack
 * SVC 0x14: costack_clear() -- Will clear the stack completely, without giving any information about what was held on the stack
-* SVC 0x15: peek_partial_costack(buffer, begin, max_size) -> actual_amount_read: u32 -- will read only a partial amount of data from an SCCS item in the middle of the item's data (starting at 'begin')
+* SVC 0x15: peek_partial_costack(buffer: pointer, begin: u32, max_size: u32) -> actual_amount_read: u32 -- will read only a partial amount of data from an SCCS item in the middle of the item's data (starting at 'begin')
+
+CoMap Operations:
+
+* SVC 0x40: push_raw_output(key: stack [u8], data_with_type: stack [u8])
+* SVC 0x41: push_output(key: stack [u8], type: u32, data: stack [u8])
+* SVC 0x42: peek_raw_input(key: stack [u8], max_size: u32) -> data: stack [u8]
+* SVC 0x43: peek_input(key: stack [u8], max_size: u32) -> (type: u32, data: stack [u8])
+* SVC 0x44: peek_raw_result(key: stack [u8], max_size: u32) -> data: stack [u8]
+* SVC 0x45: peek_result_with_type(key: stack [u8], max_size: u32) -> (type: u32, data: stack [u8])
+* SVC 0x46: copy_input_to_output(key: stack [u8])
+* SVC 0x47: copy_result_to_output(key: stack [u8])
+* SVC 0x48: get_incoming_transfer_value(address: stack NeutronAddress, id: stack u64) -> value: stack u64
+* SVC 0x49: get_incoming_transfer_info(index: u32) -> (address: stack NeutronAddress, id: stack u64) -- note, both output parameters use the costack
+* TBD count_map_swaps() -> count -- This can be used for smart data structures which can be made easily aware of invalidations to output data. This value is incremented every time the outputs map is invalidated
+
 
 Call System Functions:
 
