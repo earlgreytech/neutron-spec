@@ -55,7 +55,7 @@ The top 2 bits of the first byte of data determine length of type info:
 * 00 -- 6 bit type info (64 possibilities)
 * 01 -- 14 bit type info (6 + 8)
 * 10 -- 30 bit type info (6 + 8 + 8 + 8)
-* 11 -- variable length type info (6 bit length, with 1 added and multiplied by 2 to between 1 and 128 bytes of type info)
+* 11 -- reserved
 
 
 Standard for integer types:
@@ -66,14 +66,18 @@ Standard for integer types:
 * 3rd, 2nd, and 1st bit. Type list below
 
 Type list:
-1. u8
-2. i8
-3. u16
-4. i16
-5. u32
-6. i32
-7. u64
-8. i64
+1. 000 - u8
+2. 001 - i8
+3. 010 - u16
+4. 011 - i16
+5. 100 - u32
+6. 101 - i32
+7. 110 - u64
+8. 111 - i64
+
+For instance, to encode `[0, 1, 2, 3]` where each integer is an unsigned 8bit integer and should be displayed as decimal, the type would be `0000_1000` and the entire comap data entry would look like so:
+
+    0b0000_1000, 0, 1, 2, 3
 
 Alternate list:
 
@@ -87,18 +91,23 @@ Other Neutron Types
 * 6th bit, must be 1
 * 5th bit, must be 1 (when 0 is used for unreserved extension types)
 
-* NeutronAddress
-* NeutronLongAddress
-* ASCII string
-* UTF-8 string
-* Bitcoin style address (base58)
-* Function ID
-* Block time (u64 timestamp)
-* Block height
-* Block hash
-* 10-15 reserved
+Neutron type list:
 
-For type info with more than 2 or 4 bytes, (top bits == 01 or 10), the top bit must be 0 for all custom extensions. When the top bit is 1, it is reserved for Neutron use cases. There is no reserved type info for variable length type info (top bits = 11)
+* 11_0000 - NeutronAddress
+* 11_0001 - NeutronLongAddress
+* 11_0010 - ASCII string
+* 11_0011 - UTF-8 string
+* 11_0100 - Bitcoin style address (base58)
+* 11_0101 - Function ID
+* 11_0110 - Block time (u64 timestamp)
+* 11_0111 - Block height
+* 11_1000 - Block hash
+* 11_1001 - Generic data (will display as big endian hex string)
+* remaining bits are reserved
+
+For type info with more than 2 or 4 bytes, (top bits == 01 or 10), the top bit must be 0 for all custom extensions. When the top bit is 1, it is reserved for future Neutron extensions. 
+
+At a later point, there will be a registry formed for defining "well known" types in a computer readable format as custom extensions which wallet and node software can choose to support. All unsupported ABI types should be treated as generic data. 
 
 All integer types unless indicated are displayed as little endian numbers
 

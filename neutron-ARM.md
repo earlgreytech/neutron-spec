@@ -79,11 +79,20 @@ Call System Functions:
 
 CoMap operations:
 
-* SVC 0x30: push_comap(key: [u8], abi_data: [u8], value: [u8])
+Note: abi_data actual size can be determined by reading the top 2 bits:
+
+* 00 -- single byte (top byte only, others will be 0)
+* 01 -- two bytes (top byte and upper middle byte, others will be 0)
+* 10 -- four bytes (all four bytes)
+* 11 -- reserved/unknown
+
+abi_data in "raw" calls will be variable sized, but in using the parsing functions, will always be treated as a u32
+
+* SVC 0x30: push_comap(key: [u8], abi_data: u32, value: [u8])
 * SVC 0x31: push_raw_comap(key: [u8], raw_value: [u8])
-* SVC 0x32: peek_comap(key: [u8], begin: u32, max_length: u32) -> (abi_data: [u8], value: [u8]) --note max_length of 0 indicates no maximum length
+* SVC 0x32: peek_comap(key: [u8], begin: u32, max_length: u32) -> (abi_data: u32, value: [u8]) --note max_length of 0 is treated as "peek size only" and will not write any data
 * SVC 0x33: peek_raw_comap(key: [u8], begin: u32, max_length: u32) -> (raw_value: [u8])
-* SVC 0x34: peek_result_comap(key: [u8], begin: u32, max_length: u32) -> (abi_data: [u8], value: [u8])
+* SVC 0x34: peek_result_comap(key: [u8], begin: u32, max_length: u32) -> (abi_data: u32, value: [u8])
 * SVC 0x35: peek_raw_result_comap(key: [u8], begin: u32, max_length: u32) -> (raw_value: [u8])
 * SVC 0x36: clear_comap_key(key: [u8])
 * SVC 0x37: clear_comap_outputs()
