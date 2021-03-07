@@ -136,6 +136,8 @@ The specific responsibilities of the Call System includes:
 * Implements the logging system used by other Element components for informative messages which are not tracked for consensus purposes
 * Handles checkpoints (if implementing a database) within the state database to properly allow for reverting state in the case of errors
 
+The CallSystem is implemented in the Rust reference implementation in such a way that reentrant calls into the same ElementAPI are impossible. For instance, if a custom method was implemented on GlobalState called "store_bytecode_upgrade_result" and this ended up calling a custom BytecodeUpgrade element which then further called GlobalState again to use store_state, then the this would result in an error. This is not a strictly defined behavior, but given the complexities that could be introduced by such reentrancy, it's highly discouraged for other implementations of Neutron to allow such behavior.
+
 ## Neutron Hypervisor
 
 A Neutron Hypervisor is a component which exposes an interface for Neutron to a VM. Because each VM could be radically different, there is no one size fits all approach that is appropriate. However, the specific key pieces that should be exposed in a hypervisor includes:
@@ -151,19 +153,21 @@ There is additional "typical" responsibilities such as entry point handling, mem
 
 Whatever method by which Global Storage is implemented, there is a requirement for permanent (ie, not affected by rent) fields which indicate the overall characteristics and status of each smart contract deployed to the blockchain. This is standardized for the entire NeutronSystem and each hypervisor/VM must follow this standard. Specifically, any state with the prefix of `00` must be Neutron standardized data. Hypervisors should use a different prefix for internal data, bytecode, etc. 
 
-The ContractType field will contain the following information:
+The state at key `00 00` will contain the ContractInfo structure.
 
-* NeutronVersion: implied -- Included in the smart contract UniversalAddress; Indicates which VM etc to execute and any VM specific version info
+The state at key `00 01` will contain the DeploymentInfo structure.
+
+The ContractInfo field will contain the following information:
+
+* NeutronVersion -- Indicates which VM etc to execute and any VM specific version info
 * VMExtra: u16 -- Extra flags etc data which may be used by specific VMs/hypervisors
 * Flags: u8 -- Various flags for it's execution which do not rely on the hypervisor/VM type.
-
-
-The ContractType field will be held in the state key: `00 01`
+* UpgradeCount: u32 -- tracks the number of time bytecode/data upgrades have occured within the contract
 
 The NeutronVersion field is defined as so, in Rust:
 
     pub struct NeutronVersion{
-        pub format: u8,
+        pub format/reserved: u8,
         pub root_vm: u8,
         pub vm_version: u8,
         pub blockchain_version: u8
@@ -171,25 +175,24 @@ The NeutronVersion field is defined as so, in Rust:
 
 Format shall always be 0 but may be given additional meaning in future versions.
 
-root_vm shall be one of these values:
+root_vm shall be one of the following values:
 
-* 0 -- Unused/reserved for AAL purposes
-* 1 -- Legacy EVM (TBD)
-* 2 -- qx86
-* 3 -- Neutron EVM (TBD)
-* 4 -- WASM (TBD)
+* 0 -- Reserved
+* 1 -- Non-contract address (reserved/platform dependent)
+* 2 -- x86 (reserved)
+* 3 -- Neutron EVM (reserved)
+* 4 -- WASM (reserved)
+* 5 -- ARM
+* 6 -- RISC-V (reserved)
 
-vm_version shall currently be 0, indicating "latest VM", but may be used in the future for additional features
+A root_vm value with the top bit set (greater than 127) shall be reserved for platform specific VMs which are not portable between other platforms.
 
-blockchain_version shall be one of the following:
+vm_version shall currently be 0, indicating "latest VM", but may be used in the future for additional features. There is an exclusion for this vm_version guideline for the Non-contract address root VM. Specifically, it is expected the vm_version is used with this root VM in order to express different platform dependent addresses. For a Bitcoin style contract, this includes the following definitions:
 
-* 0 -- Unused/Reserved
-* 1 -- Qtum Mainnet
-* 2 -- Qtum Testnet
+* 0 -- pay-to-pubkeyhash
+* 1 -- pay-to-scripthash
 
-Note: blockchain version must match the blockchain being used as a consensus rule. ie, it is not possible to use Qtum Testnet formed addresses on Qtum Mainnet. 
-
-Note that in the case of bare smart contract executions which are not given an address, or in the case of smart contract creation, the NeutronVersion field should be pushed before the ContractType field in the smart contract creation ABI
+blockchain_version has no explicit meaning within Neutron, and is platform-defined.
 
 Proposed flags:
 
@@ -197,46 +200,12 @@ Proposed flags:
 * Stateless -- The contract can store no global storage state, aside from it's own bytecode. Noteably it can read external smart contract state and cause mutable side effects in other smart contracts by calling them
 * PureContract -- Every execution of this smart contract should be assumed to be pure, with no side effects. (requires Upgradeable, Stateless, and NonPayable flag)
 * NonPayable -- This smart contract should never be capable of holding coins
-* (optional/Qtum only) ApprovalContract -- Only valid on bare contract executions. Indicates that the execution will opt-in for ApprovalContract behavior
+* (Proposed/platform dependent) ApprovalContract -- Only valid on bare contract executions. Indicates that the execution will opt-in for ApprovalContract behavior
 
-
-Note it is not possible to modify ContractType after a smart contract has been deployed.
-
-
-The ContractStatus field will be stored separately from ContractType and will contain the following information:
-
-* Balance: u64 -- Balance in coins
-* AccountingID: [u8:40] -- UTXO ID (within Qtum, may vary in other blockchains) which holds the contract's balance
-* UpgradeCount: u32 -- Number of bytecode upgrades which the contract has undergone. Note this counts the number of executions which incurred one or more bytecode modifications. It does not count individual bytecode upgrades, for instance if a single execution led to 2 sections of bytecode being upgraded. Note this is Hypervisor controlled
-* ABIFormat: u8 -- The specific ABI which should be used for communication with this smart contract
-* ABIType: u64 -- An unverified declaration of the type of ABI this smart contract supports
-
-The ContractStatus state will be held in the key: `00 02`
-
-AccountingID in Qtum is composed of the following:
-
-* TransactionIDHash: u256 -- the txid
-* OutputNumber: u32 -- the output number
-* ExtraInfo: u32 -- May be used in legacy EVM to indicate an AALv1 controlled transaction??
-
-
-Proposed ABIFormats:
-
-* 0 -- NeutronABI
-* 1 -- Flat Ethereum ABI
-
-
-Proposed ABITypes:
-
-None yet, this will require thoughts about identifier standards.
-
-ContractStatus can be modified, but not without restrictions. Specifically, only ABIFormat and ABIType fields may be updated and requires a hypervisor specific upgrade method. This can not be modified in stateless, pure, or non-upgradeable smart contracts
-
-Note: In stateless blockchain models which do not incorporate a state database, all of these may be left at default values. 
+Note it is possible to modify ContractType after a smart contract has been deployed by an upgrade. This allows for a single address to be used even when a smart contract undertakes a radical upgrade such as using a different VM for bytecode execution.
 
 Finally, the DeploymentInfo structure is data which is determined at deployment time of a smart contract and can otherwise not be modified.
 
-* DeploymentUTXO: [u8:40] -- The UTXO ID which deployed the current smart contract code. (TBD is this needed?)
 * InitialDeploymentHash: u256 -- A hash of the data which was used for the deployment of a transaction. Includes things like NeutronVersion, hypervisor specific data, and constructor input data. Used for "sub" contract deployment address generation
 * DeployedFrom: UniversalShortAddress -- The responsible party or contract for this address. For "responsible party", the first spent UTXO is used as the "creator". For a smart contract, the smart contract which directly made the Element API call to create or clone this contract. 
 
@@ -244,4 +213,8 @@ The DeploymentInfo state will be held in the key: `00 03`
 
 The InitialDeploymentHash uses the NeutronABI "flat" variant for constructing the hash. Specifically, it takes the entire stack at the time of smart contract construction, converts it into NeutronABI Flat variant data, and then hashes the resulting data. Thus, it is essential for consistency to ensure that extra items are not on the stack when a smart contract is created, as this will also be included into this hash. 
 
+Noteably, these built-in state keys should not be trimmed for rent purposes, unless the contract bytecode itself is completely removed from state.
 
+## NeutronVersion within NeutronAddress
+
+NeutronAddress contains the NeutronVersion but the version info specified should not be used for determining the VM to use, 
