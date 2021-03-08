@@ -8,6 +8,13 @@ Element ID: 2
 Type: Neutron Standard
 Provision: Absolutely required for Neutron to operate
 
+Mandatory Internal Functions:
+-- These are not exposed through the smart contract interface, but are required throughout Neutron infrastructure, including by hypervisors and for token operations. Since this is not exposed through the smart contract interface, this is not a fixed interface, but the capabilities of these functions should be available to external Elements and hypervisors
+
+* private_store_state_as(address: NeutronAddress, key: [u8], value: [u8]);
+* private_load_state_as(address: NeutronAddress, key: [u8]) -> value: [u8]
+* private_key_exists_as(address: NeutronAddress, key: [u8]) -> exists: bool
+
 Mandatory Functions:
 
 * 1, load_state(key: [u8]):static -> value:[u8]
@@ -18,7 +25,7 @@ Mandatory Token Functions:
 Note: if there is no support for any type of tokens in the underlying platform, these should always return 0 
 
 * X, get_token_balance(token_owner: NeutronShortAddress, id: u32, address: NeutronShortAddress):mutable -> value: u64 --Recommended to allow any address to be checked, but acceptable for only self_address to be supported, or for only smart contract version addresses to be supported
-* X, claim_transfer(token_owner: NeutronAddress, id: u64, to: NeutronAddress) -> value: u64
+* X, claim_transfer(token_owner: NeutronAddress, id: u64) -> value: u64
 
 Recommended Standard Functions:
 
@@ -29,6 +36,7 @@ Recommended Token Functions:
 
 * X, set_token_balance(id: u32, address: NeutronShortAddress, value: u32); -- only usable by the token owner
 * X, transfer_token_balance(token_owner: NeutronAddress, id: u64, value: u64) -> new_balance: u64
+* X, claim_transfer_to_external(token_owner: NeutronAddress, id: u64, to: NeutronAddress) -> value: u64 -- note: the 'to' parameter allows for "forcing" of a smart contract to claim coins
 
 Extension Functions:
 * 5, store_input_comap(prefix: [u8], ...):comap, mutable -- stores every comap value into storage, preserving type info with the data, and lists the data under the given keynames in the comap, with the given prefix attached to each key name
@@ -37,7 +45,9 @@ Extension Functions:
 
 ## Details
 
-Token balance state is treated internally as the same concept as regular load/store state, but with special rules applied for setting the value when not the token owner. claim_transfer is equivalent to the following for reference:
+Token balance state is treated internally as the same concept as regular load/store state, but with special rules applied for setting the value when not the token owner. 
+
+claim_transfer_external is equivalent to the following for reference:
 
     assert!(id & 0x8000_0000_0000_0000 == 0);
     let map_key = generate_token_map_key(owner, id);
