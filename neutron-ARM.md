@@ -57,21 +57,6 @@ CoStack operations: --note: CoStack functions are limited to 4 u32 register para
 * SVC 0x14: costack_clear() -- Will clear the stack completely, without giving any information about what was held on the stack
 * SVC 0x15: peek_partial_costack(buffer: pointer, begin: u32, max_size: u32) -> actual_amount_read: u32 -- will read only a partial amount of data from an SCCS item in the middle of the item's data (starting at 'begin')
 
-CoMap Operations:
-
-* SVC 0x40: push_raw_output(key: stack [u8], data_with_type: stack [u8])
-* SVC 0x41: push_output(key: stack [u8], type: u32, data: stack [u8])
-* SVC 0x42: peek_raw_input(key: stack [u8], max_size: u32) -> data: stack [u8]
-* SVC 0x43: peek_input(key: stack [u8], max_size: u32) -> (type: u32, data: stack [u8])
-* SVC 0x44: peek_raw_result(key: stack [u8], max_size: u32) -> data: stack [u8]
-* SVC 0x45: peek_result_with_type(key: stack [u8], max_size: u32) -> (type: u32, data: stack [u8])
-* SVC 0x46: copy_input_to_output(key: stack [u8])
-* SVC 0x47: copy_result_to_output(key: stack [u8])
-* SVC 0x48: get_incoming_transfer_value(address: stack NeutronAddress, id: stack u64) -> value: stack u64
-* SVC 0x49: get_incoming_transfer_info(index: u32) -> (address: stack NeutronAddress, id: stack u64) -- note, both output parameters use the costack
-* TBD count_map_swaps() -> count -- This can be used for smart data structures which can be made easily aware of invalidations to output data. This value is incremented every time the outputs map is invalidated
-
-
 Call System Functions:
 
 * SVC 0x20: system_call(feature, function):variable -> error:u32 -- will call into the NeutronCallSystem
@@ -88,17 +73,25 @@ Note: abi_data actual size can be determined by reading the top 2 bits:
 
 abi_data in "raw" calls will be variable sized, but in using the parsing functions, will always be treated as a u32
 
-* SVC 0x30: push_comap(key: [u8], abi_data: u32, value: [u8])
-* SVC 0x31: push_raw_comap(key: [u8], raw_value: [u8])
-* SVC 0x32: peek_comap(key: [u8], begin: u32, max_length: u32) -> (abi_data: u32, value: [u8]) --note max_length of 0 is treated as "peek size only" and will not write any data
-* SVC 0x33: peek_raw_comap(key: [u8], begin: u32, max_length: u32) -> (raw_value: [u8])
-* SVC 0x34: peek_result_comap(key: [u8], begin: u32, max_length: u32) -> (abi_data: u32, value: [u8])
-* SVC 0x35: peek_raw_result_comap(key: [u8], begin: u32, max_length: u32) -> (raw_value: [u8])
-* SVC 0x36: clear_comap_key(key: [u8])
+* SVC 0x30: push_comap(key: stack [u8], abi_data: u32, value: stack [u8])
+* SVC 0x31: push_raw_comap(key: stack [u8], raw_value: stack [u8])
+* SVC 0x32: peek_comap(key: stack [u8], begin: u32, max_length: u32) -> (abi_data: u32, value: stack [u8]) --note max_length of 0 is treated as "peek size only" and will not write any data. The begin parameter can be used to only read a subset of the data. In the case of a key not existing, abi_data is 0 and value will be an empty stack item
+* SVC 0x33: peek_raw_comap(key: stack [u8], begin: u32, max_length: u32) -> (raw_value: stack [u8])
+* SVC 0x34: peek_result_comap(key: stack [u8], begin: u32, max_length: u32) -> (abi_data: u32, value: stack [u8])
+* SVC 0x35: peek_raw_result_comap(key: stack [u8], begin: u32, max_length: u32) -> (raw_value: stack [u8])
+* SVC 0x36: clear_comap_key(key: stack [u8])
 * SVC 0x37: clear_comap_outputs()
 * SVC 0x38: clear_comap_inputs()
 * SVC 0x39: clear_comap_results()
---todo: map copying operations
+* SVC 0x3A: copy_input_to_output(key: stack [u8])
+* SVC 0x3B: copy_result_to_output(key: stack [u8])
+--todo: specific key copying operations
+  
+CoMap Transfer Operations:
+
+* SVC 0x3C: get_incoming_transfer_value(token_contract: stack NeutronAddress, token_id: stack u64) -> value: stack u64 -- if no transfer has been sent, then the value returned is 0, rather than an error
+
+It is expected that for a more general purpose contract capable of receiving multiple tokens, that the ABI data will include a list of (token_contract, token_id) pairs so that the receiving smart contract knows what tokens are being sent to it. For more specialized smart contracts which know it will only receive one type of token, this can be hard coded.
 
 Hypervisor Functions:
 
@@ -107,11 +100,11 @@ Hypervisor Functions:
 Context Functions:
 
 * SVC 0x90: gas_remaining() -> limit:u64 -- Will get the total amount of gas available for the current execution
-* SVC 0x91: self_address() -- result on stack as NeutronShortAddress -- Will return the current address for the execution. For a "one-time" execution, this will return a null address
-* SVC 0x92: origin() -- result on stack as NeutronShortAddress -- Will return the original address which caused the current chain of executions
-* SVC 0x93: origin_long() -- result on stack as NeutronLongAddress
-* SVC 0x94: sender() -- result on stack as NeutronShortAddress -- Will return the address which caused the current execution (and not the entire chain)
-* SVC 0x95: sender_long() -- result on stack as NeutronLongAddress
+* SVC 0x91: self_address() -- result on stack as NeutronAddress -- Will return the current address for the execution. For a "one-time" execution, this will return a null address
+* SVC 0x92: origin() -- result on stack as NeutronAddress -- Will return the original address which caused the current chain of executions
+* SVC 0x93: origin_long() -- result on stack as array of bytes
+* SVC 0x94: sender() -- result on stack as NeutronAddress -- Will return the address which caused the current execution (and not the entire chain)
+* SVC 0x95: sender_long() -- result on stack as array of bytes
 * SVC 0x96: execution_type() -> type:u32 -- The type of the current execution (see built-in types)
 * SVC 0x97: execution_permissions() -> permissions:u32 -- The current permissions of the execution (see built-in types)
 
